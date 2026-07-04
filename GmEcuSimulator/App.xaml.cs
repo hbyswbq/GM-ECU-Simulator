@@ -75,6 +75,13 @@ public partial class App : Application
         // a user-set directory override.
         bus.Capture.CaptureDirectory = CaptureSettings.DefaultDirectory();
 
+        // Consolidated full-image bins land in a separate, always-on directory:
+        // %LOCALAPPDATA%\GmEcuSimulator\bins. Unlike the per-$36 fragment
+        // captures above this isn't a debug trail - it's the finished flash
+        // image (SPS region-union, or PcmHammer kernel flash) written once at
+        // the end of each programming session.
+        bus.Capture.BinOutputDirectory = CaptureSettings.DefaultBinDirectory();
+
         // Frame-level Tx/Rx sink for the Bus log tab. AppendBusFrame is gated
         // by the "Log frame traffic" checkbox so DPID Fast-band streams don't
         // flood the textbox when nobody's watching. Two formats are delivered:

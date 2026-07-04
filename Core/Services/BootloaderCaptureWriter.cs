@@ -120,6 +120,115 @@ public static class BootloaderCaptureWriter
     }
 
     /// <summary>
+    /// Consolidated SPS full-image dump. Unions every $31-declared
+    /// FlashEraseRegion into ONE contiguous, absolutely-positioned image
+    /// spanning [min(StartAddress), max(StartAddress+Size)) and writes it to
+    /// the BinOutputDirectory (separate from the per-$36 captures dir).
+    ///
+    /// Offsets are exact: each region's $36 writes were already mirrored into
+    /// region.Buffer at (startingAddress - region.StartAddress) by
+    /// Service36Handler, and here each region lands at (StartAddress - lo), so
+    /// a written byte ends up at (startingAddress - lo) in the image - its true
+    /// absolute position minus the image base. Gaps between regions (and any
+    /// byte the kernel never programmed) stay at the post-erase $FF, matching
+    /// on-device NOR reality.
+    ///
+    /// This is the SPS $34/$36 counterpart. The PcmHammer kernel write flow
+    /// bypasses regions entirely (its cal writes land in NodeState.KernelFlash);
+    /// WriteKernelFlashImage covers that path.
+    ///
+    /// Called from EcuExitLogic before ClearProgrammingState wipes the regions.
+    /// No-op when no BinOutputDirectory is set or no region was declared.
+    /// </summary>
+    public static void WriteConsolidatedSpsImage(EcuNode node, VirtualBus bus)
+    {
+        var settings = bus.Capture;
+        if (string.IsNullOrEmpty(settings.BinOutputDirectory)) return;
+        var regions = node.State.CapturedFlashRegions;
+        if (regions.Count == 0) return;
+
+        try
+        {
+            // Union span. Use long for the high edge so a region that reaches
+            // the top of the 32-bit address space can't wrap.
+            uint lo = uint.MaxValue;
+            long hi = 0;
+            foreach (var region in regions)
+            {
+                if (region.StartAddress < lo) lo = region.StartAddress;
+                long end = (long)region.StartAddress + region.Size;
+                if (end > hi) hi = end;
+            }
+            long size = hi - lo;
+            // Safety cap (same ceiling Service36Handler uses): refuse to
+            // materialise a multi-GB image if two regions sit absurdly far apart.
+            if (size <= 0 || size > Service36Handler.MaxDownloadBufferBytes) return;
+
+            var image = new byte[size];
+            image.AsSpan().Fill(0xFF);
+            foreach (var region in regions)
+                region.Buffer.AsSpan().CopyTo(image.AsSpan((int)(region.StartAddress - lo)));
+
+            Directory.CreateDirectory(settings.BinOutputDirectory!);
+            var tsLocal = node.State.DownloadCaptureSessionTimestamp ?? DateTime.Now;
+            string ts = tsLocal.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture);
+            string fileName = string.Format(CultureInfo.InvariantCulture,
+                "{0}_{1}_sps-image_{2:X8}-{3:X8}_{4}.bin", Sanitise(node.Name), ts, lo, (uint)hi, size);
+            string path = Path.Combine(settings.BinOutputDirectory!, fileName);
+
+            File.WriteAllBytes(path, image);
+
+            bus.LogSim?.Invoke(
+                $"[bin] SPS image 0x{lo:X8}-0x{hi:X8} ({size} B, {regions.Count} region(s)) -> {path}");
+            settings.RaiseCaptureWritten(path);
+        }
+        catch (Exception ex)
+        {
+            bus.LogSim?.Invoke($"[bin] SPS image write failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// PcmHammer kernel full-image dump. The PcmHammer/PCMHacking write kernel
+    /// serves its own $36 command set (PcmHammerKernel.HandleWrite), which
+    /// copies each block straight into NodeState.KernelFlash at its absolute
+    /// address - so KernelFlash is ALREADY a positioned, full flash image ($FF
+    /// where erased/never-written). We just write it out verbatim.
+    ///
+    /// KernelFlash is lazily allocated on the kernel's first touch, so a null
+    /// buffer means no PcmHammer kernel ever ran this session - nothing to dump.
+    ///
+    /// Called from EcuExitLogic before ClearProgrammingState nulls KernelFlash.
+    /// No-op when no BinOutputDirectory is set or the kernel never ran.
+    /// </summary>
+    public static void WriteKernelFlashImage(EcuNode node, VirtualBus bus)
+    {
+        var settings = bus.Capture;
+        if (string.IsNullOrEmpty(settings.BinOutputDirectory)) return;
+        var flash = node.State.KernelFlash;
+        if (flash is null) return;
+
+        try
+        {
+            Directory.CreateDirectory(settings.BinOutputDirectory!);
+            var tsLocal = node.State.DownloadCaptureSessionTimestamp ?? DateTime.Now;
+            string ts = tsLocal.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture);
+            string fileName = string.Format(CultureInfo.InvariantCulture,
+                "{0}_{1}_kernel-flash_{2}.bin", Sanitise(node.Name), ts, flash.Length);
+            string path = Path.Combine(settings.BinOutputDirectory!, fileName);
+
+            File.WriteAllBytes(path, flash);
+
+            bus.LogSim?.Invoke($"[bin] PcmHammer kernel flash ({flash.Length} B) -> {path}");
+            settings.RaiseCaptureWritten(path);
+        }
+        catch (Exception ex)
+        {
+            bus.LogSim?.Invoke($"[bin] kernel flash write failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// Bracket-close kernel sniffer. Looks at the current contents of
     /// node.State.DownloadBuffer[0..DownloadCaptureHighWaterMark] - i.e.
     /// the reassembled payload of every $36 that's landed since the most

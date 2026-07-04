@@ -22,6 +22,18 @@ public sealed class CaptureSettings
     public string? CaptureDirectory { get; set; }
 
     /// <summary>
+    /// Directory the consolidated full-image writer drops its .bin files into:
+    /// one positioned SPS image per programming session (the union of every
+    /// $31-declared erase region), plus the PcmHammer kernel's flash image
+    /// verbatim. Distinct from <see cref="CaptureDirectory"/> (which collects
+    /// the loose per-$36 fragments): these are the finished, flashable-shaped
+    /// images the user actually wants to keep. When null, the full-image
+    /// writes are no-ops (unit-test default). WPF startup sets it to
+    /// %LOCALAPPDATA%\GmEcuSimulator\bins.
+    /// </summary>
+    public string? BinOutputDirectory { get; set; }
+
+    /// <summary>
     /// Raised after a capture file is successfully written. Argument is the
     /// full path to the written .bin. UI subscribes to refresh the captured-
     /// downloads list without polling.
@@ -38,5 +50,16 @@ public sealed class CaptureSettings
     {
         var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         return System.IO.Path.Combine(local, "GmEcuSimulator", "logs", "captures");
+    }
+
+    /// <summary>
+    /// Default full-image directory used by WPF startup:
+    /// %LOCALAPPDATA%\GmEcuSimulator\bins. Kept out of the logs/ tree because
+    /// these are keepsake flash images, not a debug trail.
+    /// </summary>
+    public static string DefaultBinDirectory()
+    {
+        var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        return System.IO.Path.Combine(local, "GmEcuSimulator", "bins");
     }
 }

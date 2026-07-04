@@ -65,6 +65,18 @@ public static class EcuExitLogic
             // P3C timed out mid-transfer) still gets a tagged dump here.
             BootloaderCaptureWriter.WriteCompletedBracketIfKernel(node, captureBus, "end");
             BootloaderCaptureWriter.WriteFlashRegions(node, captureBus);
+
+            // Consolidated full-image bins (separate BinOutputDirectory,
+            // auto-saved to %LOCALAPPDATA%\GmEcuSimulator\bins in production).
+            // Two mutually-exclusive sources, both keyed on absolute address:
+            //   - SPS $34/$36 flow: union the $31-declared erase regions into
+            //     one positioned image.
+            //   - PcmHammer kernel flow: the kernel's own $36 writes land in
+            //     KernelFlash, already a full positioned image - dump it as-is.
+            // Each no-ops when its source is empty, so a session only ever
+            // emits the one that actually ran.
+            BootloaderCaptureWriter.WriteConsolidatedSpsImage(node, captureBus);
+            BootloaderCaptureWriter.WriteKernelFlashImage(node, captureBus);
         }
 
         // 3b. Clear $28 / $A5 / $34 / $36 programming-session state. Per

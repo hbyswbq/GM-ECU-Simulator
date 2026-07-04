@@ -290,7 +290,6 @@
                               ToolTip="Stream every bus + diagnostic line to %LOCALAPPDATA%\GmEcuSimulator\logs\bus logs\bus_*.csv on a dedicated background thread. Independent of the 'Log traffic' textbox gate - use when high-volume downloads make the textbox impractical."/>
                     <MenuItem Header="_Open folder…"
                               Click="OnOpenLogFolderClicked"
-                              IsEnabled="{Binding IsFileLoggingEnabled}"
                               ToolTip="Open the log directory in Explorer."/>
                     <Separator/>
                     <MenuItem Header="Include _J2534 calls"
