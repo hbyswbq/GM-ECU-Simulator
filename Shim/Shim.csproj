@@ -20,6 +20,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Physical-CAN adapter layer (Shim/Hardware/**), copied from CAN-Tool.
+         Ixxat.Vci4    = HMS managed VCI4 wrapper (the native driver at
+                         C:\Program Files\HMS\Ixxat VCI is needed at RUN time,
+                         not build time).
+         System.IO.Ports = OBDX Pro USB virtual-COM transport. -->
+    <PackageReference Include="Ixxat.Vci4" Version="4.1.4" />
+    <PackageReference Include="System.IO.Ports" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="EcuSimulator.Tests" />
   </ItemGroup>
 

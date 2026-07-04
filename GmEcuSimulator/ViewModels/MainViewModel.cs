@@ -27,6 +27,7 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
     private readonly BinReplayCoordinator replay;
     private readonly NamedPipeServer pipeServer;
     private readonly RawCanTcpServer rawCanServer;
+    private readonly HardwareCanServer hardwareCanServer;
     public ObservableCollection<EcuViewModel> Ecus { get; } = new();
 
     // The ordered set of PIDs pinned to the main window's live-tile dashboard.
@@ -120,6 +121,7 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
     {
         new ModeOption(AppMode.EcuSimulator, ConnectionType.J2534),
         new ModeOption(AppMode.EcuSimulator, ConnectionType.RawCanTcp),
+        new ModeOption(AppMode.EcuSimulator, ConnectionType.HardwareCan),
         new ModeOption(AppMode.DpsSimulator, ConnectionType.J2534),
     };
 
@@ -131,12 +133,13 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
     public string AppVersionDisplay => AppInfo.VersionDisplay;
 
     public MainViewModel(VirtualBus bus, BinReplayCoordinator replay, NamedPipeServer pipeServer,
-                         RawCanTcpServer rawCanServer)
+                         RawCanTcpServer rawCanServer, HardwareCanServer hardwareCanServer)
     {
         this.bus = bus;
         this.replay = replay;
         this.pipeServer = pipeServer;
         this.rawCanServer = rawCanServer;
+        this.hardwareCanServer = hardwareCanServer;
 
         BinReplay = new BinReplayViewModel(replay, bus, OnBinReplayLoad, OnBinReplayUnload);
         Capture = new CaptureViewModel(bus.Capture);
@@ -291,6 +294,15 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
         var fromLabel = new ModeOption(oldMode, oldConnection).Label;
         var toLabel = new ModeOption(newMode, newConnection).Label;
         bool hasEcus = Ecus.Count > 0;
+
+        // Switching TO the hardware transport: pick which physical adapter + device
+        // to bridge to. Cancelling the picker aborts the whole switch (the caller
+        // reverts the dropdown). The choice is persisted, so App startup and
+        // ApplyActiveTransport reopen the same device.
+        if (newConnection == ConnectionType.HardwareCan && oldConnection != ConnectionType.HardwareCan)
+        {
+            if (!PromptHardwareDevice()) return false;
+        }
 
         // Connection-type-only flip within the same mode: the ECU configuration
         // is identical on either transport, so there is nothing to save and no
@@ -475,31 +487,62 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
 
         try
         {
-            if (oldConnection == ConnectionType.RawCanTcp) await rawCanServer.StopAsync();
-            else                                           await pipeServer.StopAsync();
+            switch (oldConnection)
+            {
+                case ConnectionType.RawCanTcp:   await rawCanServer.StopAsync(); break;
+                case ConnectionType.HardwareCan: await hardwareCanServer.StopAsync(); break;
+                default:                         await pipeServer.StopAsync(); break;
+            }
         }
         catch (Exception ex) { bus.LogSim?.Invoke($"Stopping {oldConnection} transport failed: {ex.Message}"); }
 
         try
         {
-            if (newConnection == ConnectionType.RawCanTcp)
+            switch (newConnection)
             {
-                // No registry gating - the gauge sim is hand-configured with the port.
-                rawCanServer.Start();
-            }
-            else
-            {
-                // Mirror App startup: only listen on the pipe if the shim is
-                // registered, so an unregistered host can't reach us.
-                bool registered = false;
-                try { registered = J2534Registration.Check().IsRegistered; } catch { }
-                if (registered) pipeServer.Start();
-                else bus.LogSim?.Invoke("J2534 not registered - IPC pipe not started; register from the J2534 menu to enable host connections.");
+                case ConnectionType.RawCanTcp:
+                    // No registry gating - the gauge sim is hand-configured with the port.
+                    rawCanServer.Start();
+                    break;
+                case ConnectionType.HardwareCan:
+                    // Bridge the virtual bus onto a physical CAN adapter (Ixxat / OBDX).
+                    // An empty device key auto-selects the first available device.
+                    hardwareCanServer.Start(appSettings.HardwareAdapterKind, appSettings.HardwareDeviceKey ?? "");
+                    break;
+                default:
+                    // Mirror App startup: only listen on the pipe if the shim is
+                    // registered, so an unregistered host can't reach us.
+                    bool registered = false;
+                    try { registered = J2534Registration.Check().IsRegistered; } catch { }
+                    if (registered) pipeServer.Start();
+                    else bus.LogSim?.Invoke("J2534 not registered - IPC pipe not started; register from the J2534 menu to enable host connections.");
+                    break;
             }
         }
         catch (Exception ex) { bus.LogSim?.Invoke($"Starting {newConnection} transport failed: {ex.Message}"); }
 
         RefreshConnectionStatus();
+    }
+
+    /// <summary>
+    /// Show the hardware CAN device picker (IXXAT / OBDX) and persist the choice.
+    /// Returns false if the user cancelled, so the transport switch is aborted and
+    /// the caller reverts the dropdown selection.
+    /// </summary>
+    private bool PromptHardwareDevice()
+    {
+        var win = new GmEcuSimulator.Views.HardwareDevicePickerWindow(
+            appSettings.HardwareAdapterKind, appSettings.HardwareDeviceKey)
+        {
+            Owner = Application.Current?.MainWindow,
+        };
+        if (win.ShowDialog() != true || win.SelectedDevice is not { } dev)
+            return false;
+
+        appSettings.HardwareAdapterKind = dev.Adapter;
+        appSettings.HardwareDeviceKey = dev.Key;
+        try { appSettings.Save(); } catch { /* persistence best-effort */ }
+        return true;
     }
 
     private SimulatorConfig SnapshotForSave()
@@ -1686,6 +1729,13 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
                 rawCanServer.IsConnected ? "Connected"
               : rawCanServer.IsRunning  ? $"Listening :{rawCanServer.Port}"
               :                           "Stopped";
+        }
+        else if (currentConnection == ConnectionType.HardwareCan)
+        {
+            ConnectionStatus =
+                hardwareCanServer.IsConnected ? $"Connected: {hardwareCanServer.DeviceLabel}"
+              : hardwareCanServer.IsRunning   ? "Opening..."
+              :                                 "Stopped";
         }
         else
         {

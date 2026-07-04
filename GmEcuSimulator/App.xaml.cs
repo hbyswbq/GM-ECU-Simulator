@@ -20,6 +20,7 @@ public partial class App : Application
     public static VirtualBus Bus => Services.GetRequiredService<VirtualBus>();
     private NamedPipeServer? pipeServer;
     private RawCanTcpServer? rawCanServer;
+    private HardwareCanServer? hardwareCanServer;
     private MainWindow? mainWindow;
 
     protected override void OnStartup(StartupEventArgs e)
@@ -57,6 +58,9 @@ public partial class App : Application
             new NamedPipeServer(sp.GetRequiredService<VirtualBus>(), s => GmEcuSimulator.MainWindow.AppendJ2534Log(s)));
         services.AddSingleton<RawCanTcpServer>(sp =>
             new RawCanTcpServer(sp.GetRequiredService<VirtualBus>(), RawCanTcpServer.DefaultPort,
+                s => GmEcuSimulator.MainWindow.AppendJ2534Log(s)));
+        services.AddSingleton<HardwareCanServer>(sp =>
+            new HardwareCanServer(sp.GetRequiredService<VirtualBus>(),
                 s => GmEcuSimulator.MainWindow.AppendJ2534Log(s)));
         Services = services.BuildServiceProvider();
 
@@ -144,6 +148,7 @@ public partial class App : Application
 
         pipeServer = Services.GetRequiredService<NamedPipeServer>();
         rawCanServer = Services.GetRequiredService<RawCanTcpServer>();
+        hardwareCanServer = Services.GetRequiredService<HardwareCanServer>();
 
         // Exactly one transport is live at a time, chosen by the persisted
         // ConnectionType (selected as a sub-variant of the mode dropdown).
@@ -154,6 +159,13 @@ public partial class App : Application
             // port, nothing needs to discover us through HKLM.
             try { rawCanServer.Start(); }
             catch (Exception ex) { bus.LogSim?.Invoke($"Raw-CAN TCP listener failed to start: {ex.Message}"); }
+        }
+        else if (connection == ConnectionType.HardwareCan)
+        {
+            // Bridge the virtual bus onto a physical CAN adapter (Ixxat / OBDX).
+            // An empty device key auto-selects the first available device.
+            try { hardwareCanServer.Start(bootSettings.HardwareAdapterKind, bootSettings.HardwareDeviceKey ?? ""); }
+            catch (Exception ex) { bus.LogSim?.Invoke($"Hardware CAN transport failed to start: {ex.Message}"); }
         }
         else
         {
@@ -178,7 +190,7 @@ public partial class App : Application
         }
 
         mainWindow = new MainWindow();
-        mainWindow.Bind(bus, replay, pipeServer, rawCanServer);
+        mainWindow.Bind(bus, replay, pipeServer, rawCanServer, hardwareCanServer);
 
         // No startup auto-prime: priming is a DPS-mode operation, and DPS modes
         // do not PersistsConfig - they always start clean and the user re-primes

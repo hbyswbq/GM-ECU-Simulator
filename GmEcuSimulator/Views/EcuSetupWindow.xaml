@@ -1424,52 +1424,6 @@
                                       IsChecked="{Binding RamReadReturnsZeros}"
                                       ToolTip="When ticked, a $23 ReadMemoryByAddress for an address past the loaded bin's length (RAM) returns a positive response padded with 0x00 bytes instead of NRC $31 RequestOutOfRange. Applies to every persona; addresses inside the bin still read the real bytes."/>
 
-                            <!-- Per-stack diagnostic-service checklist. Renders the FULL gospel
-                                 service catalogue for each diagnostic standard this ECU binds
-                                 (J1979 + GMW3110 for GM, the catch-all UDS stack for Ford), with
-                                 a tick per service. Unticking a service drops it from that
-                                 stack's allow-list so the ECU NRC-$11s it - this is how
-                                 real-silicon fidelity like "the enhanced dispatcher doesn't
-                                 answer $2C" is modelled. Only the delta off the synthesized
-                                 default is persisted (EcuDto.Stacks). -->
-                            <Border Grid.Row="16" Grid.Column="0" Grid.ColumnSpan="2"
-                                    Style="{StaticResource SectionDivider}" Margin="0,16,0,10"/>
-
-                            <StackPanel Grid.Row="17" Grid.Column="0" Grid.ColumnSpan="2">
-                                <TextBlock Text="Diagnostic services"
-                                           Foreground="{DynamicResource Text.PrimaryBrush}"
-                                           FontWeight="SemiBold" FontSize="15"/>
-                                <TextBlock Text="Which SIDs each bound standard answers on this ECU. Untick to make it NRC $11 (ServiceNotSupported). Only the delta off the default is saved."
-                                           Style="{StaticResource Hint14}" Margin="0,2,0,6"
-                                           TextWrapping="Wrap"/>
-                                <ItemsControl ItemsSource="{Binding DiagnosticStacks}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <StackPanel Margin="0,6,0,0">
-                                                <TextBlock Text="{Binding Header}"
-                                                           Foreground="{DynamicResource Text.PrimaryBrush}"
-                                                           FontWeight="SemiBold"
-                                                           FontFamily="{StaticResource Font.Mono}"/>
-                                                <TextBlock Text="{Binding Note}"
-                                                           Style="{StaticResource Hint14}"
-                                                           TextWrapping="Wrap" Margin="0,2,0,0"
-                                                           Visibility="{Binding ShowsNote, Converter={StaticResource BoolToVis}}"/>
-                                                <ItemsControl ItemsSource="{Binding Services}" Margin="6,2,0,0">
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate>
-                                                            <CheckBox Margin="0,1"
-                                                                      IsChecked="{Binding IsEnabled, Mode=TwoWay}"
-                                                                      Content="{Binding Display}"
-                                                                      ToolTip="{Binding Name}"
-                                                                      FontFamily="{StaticResource Font.Mono}"/>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
                         </Grid>
                     </ScrollViewer>
                 </DockPanel>

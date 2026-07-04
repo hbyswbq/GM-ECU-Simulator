@@ -451,9 +451,9 @@ public partial class MainWindow : Window
     }
 
     public void Bind(VirtualBus bus, Core.Replay.BinReplayCoordinator replay, Shim.Ipc.NamedPipeServer pipeServer,
-                     Shim.Ipc.RawCanTcpServer rawCanServer)
+                     Shim.Ipc.RawCanTcpServer rawCanServer, Shim.Ipc.HardwareCanServer hardwareCanServer)
     {
-        vm = new MainViewModel(bus, replay, pipeServer, rawCanServer);
+        vm = new MainViewModel(bus, replay, pipeServer, rawCanServer, hardwareCanServer);
         DataContext = vm;
         bus.NodesChanged += (_, _) => Dispatcher.BeginInvoke(() =>
         {

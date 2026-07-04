@@ -108,10 +108,6 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
         AutoPopulateDidsCommand = new RelayCommand(AutoPopulateMissingDids);
         EditPrimeCommand = new RelayCommand(EditPrime, () => primeContext != null && bus != null);
 
-        // Render the per-stack diagnostic-service checklist (Advanced tab). Rebuilt whenever the
-        // persona or the physical request CAN id changes, since both re-synthesise the bindings.
-        RebuildDiagnosticStacks();
-
         // Hide the PID-mode sections the current persona doesn't speak (Ford -> no $1A / $2D).
         RefreshSectionVisibility();
     }
@@ -331,7 +327,7 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
     public ushort PhysicalRequestCanId
     {
         get => Model.PhysicalRequestCanId;
-        set { if (Model.PhysicalRequestCanId != value) { Model.PhysicalRequestCanId = value; OnPropertyChanged(); OnPropertyChanged(nameof(PhysicalRequestCanIdHex)); RebuildDiagnosticStacks(); } }
+        set { if (Model.PhysicalRequestCanId != value) { Model.PhysicalRequestCanId = value; OnPropertyChanged(); OnPropertyChanged(nameof(PhysicalRequestCanIdHex)); } }
     }
 
     public string PhysicalRequestCanIdHex
@@ -1205,9 +1201,6 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
             // flash-read picker is GM-persona-only; re-announce both visibilities.
             OnPropertyChanged(nameof(IsFordUdsPersona));
             OnPropertyChanged(nameof(IsGmPersona));
-            // Switching persona re-synthesises the stack bindings (Ford catch-all UDS vs GM
-            // J1979+GMW3110), so rebuild the per-service checklist to match.
-            RebuildDiagnosticStacks();
             // GMW3110-only PID-mode sections ($1A / $2D) hide under the Ford persona and reappear under GM.
             RefreshSectionVisibility();
             // The $22 Identifier picker is persona-scoped (GM vs Ford library),
@@ -1228,100 +1221,6 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
                 if (!keep.Contains(standard))
                     Model.SetServiceOverride(standard, null);
         }
-    }
-
-    // ---------------- Diagnostic-service checklist (per-stack allow-list) ----------------
-
-    /// <summary>
-    /// The per-stack diagnostic-service checklist shown in the Advanced tab (DESIGN doc section 6).
-    /// One SECTION per bound standard for a GM node (J1979, GMW3110); for the Ford capture node the
-    /// single catch-all binding is split into one section per display group (OBD, UDS, Ford-
-    /// proprietary), all sharing the one "Ford" override - so it has the same segmented shape as GM.
-    /// Each section renders a tick per service; toggling persists only the delta off the synthesized
-    /// default via <see cref="ApplyStackServiceSelection"/>. Rebuilt on persona / CAN-id change.
-    /// </summary>
-    public ObservableCollection<StackBindingViewModel> DiagnosticStacks { get; } = new();
-
-    // Per-standard full catalog + synthesized default, stashed when DiagnosticStacks is (re)built so
-    // ApplyStackServiceSelection can recompute the single per-standard override from the live ticks -
-    // even when one standard is rendered as several segment sections (the Ford catch-all).
-    private readonly Dictionary<string, (Core.Protocol.ServiceCatalog Catalog, HashSet<byte> Default)> stackCatalogs = new();
-
-    /// <summary>
-    /// Repopulate <see cref="DiagnosticStacks"/> from the ECU's synthesized default bindings, with
-    /// each service's tick state taken from the effective filter (the saved override if any, else the
-    /// synthesized default). A catch-all (Ford) binding is split into one section per display group;
-    /// the synthesized defaults are also what the checklist compares against so it stores only the delta.
-    /// </summary>
-    public void RebuildDiagnosticStacks()
-    {
-        DiagnosticStacks.Clear();
-        stackCatalogs.Clear();
-        foreach (var def in Model.SynthesizedDefaults())
-        {
-            var standard = def.Stack.Standard;
-            var catalog = def.Stack.Catalog;
-            var effective = Model.GetServiceOverride(standard) ?? def.Enabled;
-            stackCatalogs[standard] = (catalog, new HashSet<byte>(catalog.Sids.Where(def.Enabled.Allows)));
-
-            if (def.CatchAll)
-            {
-                // Segment a catch-all (Ford) catalog into its display groups so the editor shows OBD,
-                // UDS, and Ford-proprietary as separate sections - the same shape GM gets from its
-                // J1979 + GMW3110 bindings. Every segment shares the one standard ("Ford") override.
-                foreach (var (header, services) in GroupForDisplay(catalog))
-                    DiagnosticStacks.Add(new StackBindingViewModel(this, standard, header,
-                        services.Select(d => (d.Sid, d.Name, effective.Allows(d.Sid))), note: null));
-            }
-            else
-            {
-                DiagnosticStacks.Add(new StackBindingViewModel(this, standard, standard,
-                    catalog.Services.Select(d => (d.Sid, d.Name, effective.Allows(d.Sid))), note: null));
-            }
-        }
-    }
-
-    // Group a catalog's services by display group, preserving first-appearance (SID) order. A null
-    // group (the UDS services folded into the Ford catalog) shows under "UDS".
-    private static IEnumerable<(string Header, List<Core.Protocol.ServiceDescriptor> Services)>
-        GroupForDisplay(Core.Protocol.ServiceCatalog catalog)
-    {
-        var order = new List<string>();
-        var map = new Dictionary<string, List<Core.Protocol.ServiceDescriptor>>();
-        foreach (var d in catalog.Services)
-        {
-            var key = d.Group ?? "UDS";
-            if (!map.TryGetValue(key, out var list)) { map[key] = list = new(); order.Add(key); }
-            list.Add(d);
-        }
-        foreach (var key in order) yield return (key, map[key]);
-    }
-
-    /// <summary>
-    /// Recompute and persist one standard's allow-list from the live ticks across EVERY section that
-    /// shares it (the Ford segments combine here), storing only the delta off the synthesized default:
-    /// ticks identical to the default clear the override (keeps the config quiet); ticks covering the
-    /// whole catalog become the wildcard "*"; otherwise an explicit allow-list. Called by
-    /// <see cref="StackBindingViewModel.OnServiceToggled"/>.
-    /// </summary>
-    internal void ApplyStackServiceSelection(string standard)
-    {
-        if (!stackCatalogs.TryGetValue(standard, out var info)) return;
-
-        var enabled = new HashSet<byte>();
-        foreach (var section in DiagnosticStacks)
-            if (section.Standard == standard)
-                foreach (var svc in section.Services)
-                    if (svc.IsEnabled) enabled.Add(svc.Sid);
-
-        Core.Protocol.IServiceFilter? filter;
-        if (enabled.SetEquals(info.Default))
-            filter = null;                                       // back to default -> drop the override
-        else if (enabled.Count == info.Catalog.Count)
-            filter = Core.Protocol.AllServices.Instance;         // everything enabled -> wildcard
-        else
-            filter = new Core.Protocol.SidAllowList(enabled);    // an explicit jump-table subset
-        Model.SetServiceOverride(standard, filter);
     }
 
     // ---------------- Security ($27) ----------------

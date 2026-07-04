@@ -80,6 +80,22 @@ public sealed class AppSettings
     public ConnectionType ConnectionType { get; set; } = ConnectionType.J2534;
 
     /// <summary>
+    /// For <see cref="ConnectionType.HardwareCan"/>: which physical CAN backend to
+    /// open - Ixxat VCI4 (USB-to-CAN V2) or an OBDX Pro scantool. Persisted so the
+    /// hardware bridge reopens the same adapter family on next launch.
+    /// </summary>
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public Shim.Hardware.CanAdapterKind HardwareAdapterKind { get; set; } = Shim.Hardware.CanAdapterKind.IxxatVci;
+
+    /// <summary>
+    /// For <see cref="ConnectionType.HardwareCan"/>: the adapter-specific device key
+    /// to open (Ixxat VCI object id, or an OBDX transport spec like <c>serial:COM5</c>
+    /// / <c>tcp:192.168.4.1:23</c>). Null/empty = auto-select the first available
+    /// device of <see cref="HardwareAdapterKind"/>.
+    /// </summary>
+    public string? HardwareDeviceKey { get; set; }
+
+    /// <summary>
     /// Last directory the user picked an archive from in the DPS prime wizard.
     /// Used as InitialDirectory for the next archive pick so the wizard opens
     /// where you were last working instead of wherever Windows' MRU points.

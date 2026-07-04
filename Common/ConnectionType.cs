@@ -10,10 +10,15 @@ namespace Common;
 //             developed gauge simulator can join the bus as if it were a node on
 //             a shared wire. ISO-TP runs on both ends; the wire carries single
 //             CAN frames only, never reassembled USDT messages.
+// HardwareCan - an ICanAdapter (Ixxat VCI4 / OBDX Pro) bridges the virtual bus to
+//             a PHYSICAL CAN wire, so real hardware (e.g. an ESP32 CAN-Display)
+//             sees the simulated ECUs' broadcast + diagnostic traffic and can talk
+//             back in. GM normal-mode rate (500 kbit/s, 11-bit) is assumed.
 public enum ConnectionType
 {
     J2534 = 0,
     RawCanTcp = 1,
+    HardwareCan = 2,
 }
 
 public static class ConnectionTypeExtensions
@@ -24,6 +29,7 @@ public static class ConnectionTypeExtensions
     {
         ConnectionType.J2534 => "J2534",
         ConnectionType.RawCanTcp => "TCP",
+        ConnectionType.HardwareCan => "Hardware",
         _ => c.ToString(),
     };
 }

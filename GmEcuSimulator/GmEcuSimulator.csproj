@@ -36,6 +36,13 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.7" />
     <!-- Transitive dependency of the vendored Common.dll. -->
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <!-- Referenced directly (not just transitively via Shim) so the package's
+         CopyNativeLibs_x64_Build target stages vcinet\x64\vcinet.x64.dll (+ Ijwhost.dll)
+         BESIDE this exe. Ixxat.Vci4's targets live in build/ (not buildTransitive/), so
+         they only run in the project that directly references the package; the copied
+         vcinet\ subfolder is not a tracked output and does not flow from Shim's bin to
+         the app's bin. Without this, HardwareCan fails: "Did not find vcinet\x64\vcinet.x64.dll". -->
+    <PackageReference Include="Ixxat.Vci4" Version="4.1.4" />
     <!-- Material Design theme - exploratory: SetupWindow's PID grid only. Same
          version as the sibling DataLogger. If the look is adopted more broadly
          the wiring moves up to App.xaml. -->
