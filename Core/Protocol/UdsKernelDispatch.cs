@@ -69,7 +69,28 @@ public sealed class UdsKernelDispatch
                 return true;
             case Service.TransferData:
                 if (isFunctional) return true;
+                // A PcmHammer/PCMHacking write kernel repurposes $36 as its own
+                // self-contained write-block (ct/len/addr/data/sum16), NOT the
+                // boot-ROM TransferData form Service36Handler decodes. The flavour
+                // was fixed at the $36 sub $80 handover, so it can't change
+                // mid-session - branch on it here, same as the read path branches
+                // on T43ReadKernelActive.
+                if (node.State.KernelIsPcmHammer)
+                {
+                    if (PcmHammerKernel.HandleWrite(node, usdt, ch))
+                        DispatchShared.ActivateP3C(node, ch);
+                    return true;
+                }
                 if (Service36Handler.Handle(node, usdt, ch))
+                    DispatchShared.ActivateP3C(node, ch);
+                return true;
+            case PcmHammerKernel.KernelFlashQuery:
+                // Mode $3D is the PcmHammer kernel's query/erase channel (probe /
+                // CRC-32 / sector erase). Only that kernel answers it; a generic
+                // SPS/read kernel falls through to NRC $11 exactly as before.
+                if (!node.State.KernelIsPcmHammer) return false;
+                if (isFunctional) return true;
+                if (PcmHammerKernel.HandleQuery(node, usdt, ch))
                     DispatchShared.ActivateP3C(node, ch);
                 return true;
             default:

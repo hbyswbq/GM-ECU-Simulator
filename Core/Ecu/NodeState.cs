@@ -283,6 +283,27 @@ public sealed class NodeState
     public long UploadCursor { get; set; }
 
     /// <summary>
+    /// True once a PcmHammer / PCMHacking.net flash kernel has been
+    /// DownloadAndExecute'd (banner sniffed at the $36 sub $80 handover in
+    /// Service36Handler). Selects the kernel-flavour branch in
+    /// <see cref="Core.Protocol.UdsKernelDispatch"/>: that kernel answers its OWN
+    /// command set - mode $3D (probe / CRC-32 / erase) and a custom $36
+    /// write-block - instead of the generic SPS-kernel services. Distinct from
+    /// <see cref="T43ReadKernelActive"/> (a READ kernel); this is a WRITE kernel.
+    /// Reset by ClearProgrammingState.
+    /// </summary>
+    public bool KernelIsPcmHammer { get; set; }
+
+    /// <summary>
+    /// Flash image the running PcmHammer kernel operates on (see
+    /// <see cref="Core.Services.PcmHammerKernel"/>). Lazily allocated to a 2 MiB
+    /// $FF span, erased per 64 KiB sector by $3D $05, written by the kernel $36,
+    /// CRC-32'd by $3D $02. Null until the kernel first touches it; reset by
+    /// ClearProgrammingState.
+    /// </summary>
+    public byte[]? KernelFlash { get; set; }
+
+    /// <summary>
     /// Wipes all programming + download flags. Called from EcuExitLogic so $20
     /// and P3C timeout return the ECU to Normal Communication Mode.
     /// </summary>
@@ -291,6 +312,8 @@ public sealed class NodeState
         UploadActive = false;
         T43ReadKernelActive = false;
         UploadCursor = 0;
+        KernelIsPcmHammer = false;
+        KernelFlash = null;
         NormalCommunicationDisabled = false;
         ProgrammingModeRequested = false;
         ProgrammingModeActive = false;

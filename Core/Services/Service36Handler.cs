@@ -178,6 +178,15 @@ public static class Service36Handler
             // kernel binding takes over.
             if (ch.Bus is not null)
                 BootloaderCaptureWriter.WriteCompletedBracketIfKernel(node, ch.Bus, "exec");
+
+            // Kernel flavour: a PcmHammer/PCMHacking write kernel carries a
+            // "PCMHacking" ASCII banner in its image. Spot it in the just-uploaded
+            // kernel so the shared kernel dispatch serves that kernel's own $3D +
+            // custom $36 command set (see UdsKernelDispatch / PcmHammerKernel).
+            // Every kernel still enters via the one shared UdsKernel binding; the
+            // flag - not a separate stack - selects the behaviour, mirroring the
+            // read path's T43ReadKernelActive / ReadFamily flags.
+            node.State.KernelIsPcmHammer = KernelLooksLikePcmHammer(node);
             node.EnterKernelMode(ProtocolStacks.KernelBindingFor(node));
 
             // 6Speed.T43 read-kernel handover: when a T43-family ECU has just been
@@ -200,5 +209,17 @@ public static class Service36Handler
         // synchronous behaviour every existing flow/test relies on.
         FlashTiming.EnqueueTransferResponse(node, ch, [Service.Positive(Service.TransferData)]);
         return true;
+    }
+
+    // The PcmHammer/PCMHacking flash kernel image carries an ASCII "PCMHacking"
+    // banner. Spotting it in the just-uploaded kernel lets the shared kernel
+    // dispatch present that kernel's flash command set without any per-ECU config.
+    private static bool KernelLooksLikePcmHammer(EcuNode node)
+    {
+        byte[]? buf = node.State.DownloadBuffer;
+        if (buf is null) return false;
+        int hi = (int)Math.Min((uint)buf.Length, node.State.DownloadCaptureHighWaterMark);
+        if (hi <= 0) hi = buf.Length;
+        return buf.AsSpan(0, hi).IndexOf("PCMHacking"u8) >= 0;
     }
 }
