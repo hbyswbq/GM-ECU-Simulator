@@ -1,14 +1,15 @@
 using Common.Protocol;
 using Core.Bus;
+using Core.Ecu;
 using Core.Scheduler;
 using Core.Services;
 using System.Collections.Concurrent;
 using System.Globalization;
 using System.Text;
 
-namespace Core.Ecu.Personas;
+namespace Core.Protocol;
 
-// Ford UDS persona: a write-everything-down-and-reject-everything-politely
+// Ford UDS capture dispatch: a write-everything-down-and-reject-everything-politely
 // dispatcher used to elicit PCMTec's request stream when no real Ford ECU is
 // available. Every inbound USDT message is appended to a per-session log file
 // under %LOCALAPPDATA%\GmEcuSimulator\logs\ford-uds\ with full byte hex,
@@ -16,7 +17,7 @@ namespace Core.Ecu.Personas;
 // functional). Replies are always NRC $11 ServiceNotSupported on physical
 // requests; functional broadcasts stay silent (spec).
 //
-// Why singleton: matches Gmw3110Persona / UdsKernelPersona. The per-session
+// Why singleton: matches Gmw3110Dispatch / UdsKernelDispatch. The per-session
 // log file is owned by static state behind a lock - one process loads the
 // persona once, gets one file per host-connect cycle. The HostConnected /
 // HostDisconnected events on VirtualBus drive the file rotate so a Reset
@@ -31,13 +32,10 @@ namespace Core.Ecu.Personas;
 // Iterate by hand-extending the (sid, prefix) -> response table below as we
 // observe PCMTec's request stream in the log; every other request still hits
 // the default NRC path so we keep observing.
-public sealed class FordUdsPersona : IDiagnosticPersona
+public sealed class FordUdsDispatch
 {
-    public static readonly FordUdsPersona Instance = new();
-    private FordUdsPersona() { }
-
-    public string Id => "ford-uds";
-    public string DisplayName => "Ford UDS (PCMTec)";
+    public static readonly FordUdsDispatch Instance = new();
+    private FordUdsDispatch() { }
 
     // ---- Iteration knobs: Mode 09 identity served from the loaded bin ----
     //
@@ -138,8 +136,7 @@ public sealed class FordUdsPersona : IDiagnosticPersona
     // flag). The 4-byte trailing word is the RAM target. PCMTec uses this
     // to tell the ECU "when I later poll slot N, sample from RAM at X".
     //
-    // The cookbook's whole project goal is to recover the firmware-side
-    // wire_id -> RAM-address mapping. PCMTec sending $A1 *IS* that mapping
+    // PCMTec sending $A1 *IS* that mapping
     // - in PCMTec's own choice of slot ids. Persist every $A1 to a CSV so
     // we accumulate the table across sessions; the user picks which MIDs
     // to log in PCMTec's UI and each new MID lands as a new row.
@@ -359,41 +356,44 @@ public sealed class FordUdsPersona : IDiagnosticPersona
         rpmFrame[4] = (byte)(rpmX4 >> 8);   // RPM*4 high
         rpmFrame[5] = (byte)(rpmX4 & 0xFF); // RPM*4 low
         // rpmFrame[6..11] zero - other engine-bus fields (load, gear, etc.)
-        broadcaster.BroadcastFrame(rpmFrame);
+        // DISABLED 2026-06-28 per user request: the synthetic 0x97 engine-bus
+        // heartbeat is suppressed. The frame is still built above so the code
+        // path is intact - re-enable by uncommenting the BroadcastFrame call.
+        // broadcaster.BroadcastFrame(rpmFrame);
     }
 
-    // Mode 09 PID 02 - VIN. SAE J1979 reply: 49 02 01 <17 VIN bytes>. Reads
-    // the 17-byte VIN from the bin at 0x000100C0; falls back to VinFallback
-    // when the bin is absent or the window isn't 17 printable-ASCII bytes.
-    private static byte[] BuildMode09Pid02Reply()
+    /// <summary>The 17-byte VIN used to seed Mode $09 InfoType $02 for a ford-uds node: read from the loaded flash bin
+    /// at 0x000100C0, or the known-good fallback when the bin is absent or the window isn't 17 printable-ASCII bytes.
+    /// ConfigStore seeds the Mode $09 store from this so the shared Mode-09 handler (Service09Handler) answers a VIN
+    /// that matches a $23 ReadMemoryByAddress of the same window - the cross-check PCMTec performs.</summary>
+    public static byte[] ReadVinBytes()
     {
         string vin = ReadAsciiFromBin(VinBinOffset, VinLength, stopAtDot: false);
         if (vin.Length != VinLength) vin = VinFallback;
-        // 49 (positive-response SID) + 02 (PID echo) + 01 (NODI) + 17 VIN bytes
-        var reply = new byte[3 + 17];
-        reply[0] = 0x49;
-        reply[1] = 0x02;
-        reply[2] = 0x01;
-        System.Text.Encoding.ASCII.GetBytes(vin, 0, 17, reply, 3);
-        return reply;
+        return System.Text.Encoding.ASCII.GetBytes(vin);
     }
 
-    // Mode 09 PID 04 - Calibration ID. 49 04 01 <16 ASCII bytes, zero-padded>.
-    // Reads the '.'-terminated strategy string from the bin at 0x00010046
-    // ("HAEE4UY.HEX" -> "HAEE4UY"); falls back to CalIdFallback when absent.
-    private static byte[] BuildMode09Pid04Reply()
+    /// <summary>The Calibration ID (strategy) string used to seed Mode $09 InfoType $04 for a ford-uds node: the
+    /// '.'-terminated run at flash 0x00010046 ("HAEE4UY.HEX" -> "HAEE4UY"), or the fallback when the bin is absent.
+    /// ConfigStore seeds the Mode $09 store from this to back the shared Mode-09 handler (Service09Handler).</summary>
+    public static byte[] ReadCalIdBytes()
     {
         string calId = ReadAsciiFromBin(CalIdBinOffset, CalIdMaxLength, stopAtDot: true);
         if (calId.Length == 0) calId = CalIdFallback;
-        // 49 + 04 + 01 (NODI) + 16 ASCII bytes (zero-padded)
-        var reply = new byte[3 + 16];
-        reply[0] = 0x49;
-        reply[1] = 0x04;
-        reply[2] = 0x01;
-        int n = Math.Min(calId.Length, 16);
-        System.Text.Encoding.ASCII.GetBytes(calId, 0, n, reply, 3);
-        // bytes 3+n .. 18 already zero
-        return reply;
+        return System.Text.Encoding.ASCII.GetBytes(calId);
+    }
+
+    /// <summary>Seeds the VIN (InfoType $02) and Calibration ID (InfoType $04) into the ford-uds node's dedicated
+    /// Mode $09 store, pulling the values from the loaded flash bin (or the known-good fallback). Called by ConfigStore
+    /// on a ford-uds config load. The Ford UDS persona does NOT implement GMW3110 $1A, so Mode $09 keeps its own store
+    /// and never touches the $1A identity dictionaries; a GM/Holden $90 row left in the config can no longer leak into
+    /// the $09 reply. Sourcing the VIN from the same 0x000100C0 bin window the bin-backed $23 reads means a $09 VIN
+    /// reply stays byte-for-byte identical to a $23 ReadMemoryByAddress of that address - the cross-check PCMTec
+    /// performs.</summary>
+    public static void SeedMode09Identity(EcuNode node)
+    {
+        node.SetMode09Info(0x02, ReadVinBytes());
+        node.SetMode09Info(0x04, ReadCalIdBytes());
     }
 
     // Pull an ASCII string out of the loaded flash bin. Returns "" if no bin
@@ -486,7 +486,7 @@ public sealed class FordUdsPersona : IDiagnosticPersona
 
     public bool Dispatch(EcuNode node, ReadOnlySpan<byte> usdt, ChannelSession ch,
                         bool isFunctional, byte sid, double nowMs, DpidScheduler scheduler,
-                        DiagnosticStack stack)
+                        DiagnosticStack stack, IServiceFilter? enabled = null)
     {
         // Log the request. Best-effort - never let logging failure crash the
         // bus thread; the IPC pipe and other ECUs depend on this returning.
@@ -507,23 +507,39 @@ public sealed class FordUdsPersona : IDiagnosticPersona
         // bus would otherwise step on each other).
         if (isFunctional) return true;
 
-        // Canned-response whitelist: short-circuit specific (SID, sub-id)
-        // shapes with a hard-coded positive reply. Anything else falls
-        // through to the default NRC path so we keep observing PCMTec's
-        // probe stream.
-        if (sid == 0x09 && usdt.Length >= 2)
+        // Per-service allow-list gate - parity with the GM stacks' editor checklist
+        // (DESIGN doc section 6). The Ford binding is CatchAll, so every SID reaches us
+        // and is logged above regardless of the allow-list; but when the editor has
+        // unticked a service this persona presents (the Ford catalog = OBD + UDS +
+        // Ford-proprietary $A0/$A1/$B1), answer it with NRC $11 ServiceNotSupported
+        // instead of running its handler - the same wire effect an unticked GMW3110
+        // service produces (there it's gated structurally at Resolve; here, because
+        // CatchAll bypasses Owns's allow-list check, we gate in-dispatch). A SID outside
+        // the Ford catalog entirely (a probe like $99) is never gated - it's still
+        // logged above and falls through to the default NRC path so we keep observing.
+        if (enabled is not null
+            && StandardCatalogs.Ford.Contains(sid)
+            && !enabled.Allows(sid))
         {
-            byte pid = usdt[1];
-            if (pid == 0x02)
-            {
-                node.State.Fragmenter.EnqueueResponse(ch, node.UsdtResponseCanId, BuildMode09Pid02Reply());
-                return true;
-            }
-            if (pid == 0x04)
-            {
-                node.State.Fragmenter.EnqueueResponse(ch, node.UsdtResponseCanId, BuildMode09Pid04Reply());
-                return true;
-            }
+            ServiceUtil.EnqueueNrc(node, ch, sid, Nrc.ServiceNotSupported);
+            return true;
+        }
+
+        // Legislated OBD modes are manufacturer-agnostic, so the ford-uds capture stack does NOT carry its own copies:
+        // it logs the request above, then delegates $01 ShowCurrentData and $09 RequestVehicleInformation to the SAME
+        // shared J1979 handlers GM uses (the better-covered implementation). Mode-09 VIN / CalID are identity-sourced
+        // (DID $90 / $C0), seeded from the loaded flash bin at config-apply time (ConfigStore) so they still agree with
+        // a $23 ReadMemoryByAddress of the same window - the cross-check PCMTec performs. Other OBD modes have no shared
+        // handler and fall through to the in-catalog NRC path below.
+        if (sid == Service.Obd01ShowCurrentData)
+        {
+            Service01Handler.Handle(node, usdt, ch, nowMs, isFunctional);
+            return true;
+        }
+        if (sid == Service.RequestVehicleInformation)   // $09 VIN / CalID
+        {
+            Service09Handler.Handle(node, usdt, ch, isFunctional);
+            return true;
         }
 
         // Ford-proprietary $A1 SETUP_DMR. Wire format (verified against the
@@ -548,8 +564,21 @@ public sealed class FordUdsPersona : IDiagnosticPersona
             byte index = usdt[1];
             byte modeByte = usdt[2];
             uint addr = (uint)((usdt[3] << 24) | (usdt[4] << 16) | (usdt[5] << 8) | usdt[6]);
-            dmrSlots[index] = addr;
+            // Always capture the binding first so the observe/CSV goal is unaffected
+            // even when we reject the request below.
             AppendCapturedMapping(nowMs, index, modeByte, addr);
+            // Opt-in strictness (EcuNode.RejectUnmappedDmr, default off): if the
+            // address isn't in the $A1 grid (DmrSignalMappings), answer NRC $31
+            // RequestOutOfRange - the closest UDS code to "address not valid" -
+            // instead of binding the slot and echoing E1. Off by default because
+            // the accept-all path is what lets PCMTec bind slots we haven't
+            // pre-wired and keeps its datalog progressing.
+            if (node.RejectUnmappedDmr && node.DmrMappingFor(addr) is null)
+            {
+                ServiceUtil.EnqueueNrc(node, ch, sid, Nrc.RequestOutOfRange);
+                return true;
+            }
+            dmrSlots[index] = addr;
             node.State.Fragmenter.EnqueueResponse(ch, node.UsdtResponseCanId,
                 new byte[] { 0xE1, index });
             return true;
@@ -610,6 +639,13 @@ public sealed class FordUdsPersona : IDiagnosticPersona
         if (sid == 0x11)
         {
             byte sub = usdt.Length >= 2 ? usdt[1] : (byte)0;
+            // Real PCM MDX (DSEB3G-12A650-CD) supports hardReset ($01) ONLY; every other reset
+            // type NRC-$12s (subFunctionNotSupported). Mask off the suppress-positive bit first.
+            if ((sub & 0x7F) != 0x01)
+            {
+                ServiceUtil.EnqueueNrc(node, ch, sid, Nrc.SubFunctionNotSupportedInvalidFormat);
+                return true;
+            }
             node.State.ClearProgrammingState();
             node.State.SecurityUnlockedLevel = 0;
             node.State.SecurityPendingSeedLevel = 0;
@@ -741,13 +777,18 @@ public sealed class FordUdsPersona : IDiagnosticPersona
             return true;
         }
 
-        // Not a Ford-specific service. Decline so VirtualBus.DispatchUsdt can
-        // offer it to CommonServices (stack-neutral services like $22) before
-        // falling back to NRC $11 ServiceNotSupported. Returning false here -
-        // rather than NRC'ing inline - is what lets ForScan's $22 0200 connect
-        // probe reach the shared Service22Handler instead of being swallowed.
-        // (Functional requests already returned true at the top of Dispatch,
-        // so they stay silent and never reach this point.)
+        // We didn't answer this SID above. DECLINE (return false): DispatchUds routes $22 to
+        // Service22Handler and the bus NRC-$11s everything else (physical) - matching a real Ford PCM,
+        // which answers serviceNotSupported to any unsupported physically-addressed service rather than
+        // sitting silent and forcing the tester through its P2 timeout. This applies uniformly whether
+        // or not the SID is in the Ford catalog: catalog membership is an internal modelling artifact
+        // with no on-wire correlate, so an unknown probe ($1A, $99, ...) gets the same NRC $11 a real
+        // ECU would emit. Returning false - rather than NRC'ing inline - is also what lets ForScan's
+        // $22 0200 connect probe reach Service22Handler instead of being swallowed.
+        //
+        // Every request was still LOGGED above, so the capture/observer goal is unaffected; only the
+        // wire reply changes. Functional requests already returned true at the top, so they stay silent
+        // regardless (spec-correct: no broadcast NRC storms).
         return false;
     }
 

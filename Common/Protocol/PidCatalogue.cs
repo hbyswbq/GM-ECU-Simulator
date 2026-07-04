@@ -62,7 +62,7 @@ public static class PidCatalogue
     /// embedded Ford SCP/J2190 library.</summary>
     public static readonly IReadOnlyList<PidCatalogueEntry> Mode22Ford = BuildFromLibrary(PidLibrary.Mode22Ford, PidMode.Mode22);
 
-    /// <summary>Persistence-side persona id (Core's FordUdsPersona.Id) whose $22
+    /// <summary>Persistence-side persona id (EcuNode.PersonaId) whose $22
     /// picker draws from the Ford library instead of the GM one.</summary>
     private const string FordPersonaId = "ford-uds";
 

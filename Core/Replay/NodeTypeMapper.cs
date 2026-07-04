@@ -7,7 +7,7 @@ namespace Core.Replay;
 // types fall through to a synthetic NODE_<hex> name and the same arithmetic
 // relationship.
 //
-// Returns null only for NodeType == 0 (eNodeType.None) — caller skips
+// Returns null only for NodeType == 0 (eNodeType.None) - caller skips
 // such channels.
 public static class NodeTypeMapper
 {

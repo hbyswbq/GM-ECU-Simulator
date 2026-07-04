@@ -7,7 +7,7 @@ namespace Common.Protocol;
 // values but different semantics between the specs.
 //
 // Only SIDs the simulator actually answers are listed; add new entries as
-// kernel personas grow. NRC codes are shared with GMW3110 (both families
+// the UDS-kernel dispatch grows. NRC codes are shared with GMW3110 (both families
 // inherit the KWP2000 NRC table), so use Common.Protocol.Nrc.* alongside.
 public static class Iso14229
 {

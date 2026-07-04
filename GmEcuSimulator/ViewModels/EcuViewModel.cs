@@ -81,6 +81,7 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
             new PidModeSection(this, PidMode.Mode1A, "$1A (Identity / ReadDataByIdentifier)", Pids),
             new PidModeSection(this, PidMode.Mode22, "$22 (ReadDataByIdentifier)", Pids),
             new PidModeSection(this, PidMode.Mode2D, "$2D (DefinePIDByAddress)", Pids),
+            new PidModeSection(this, PidMode.Mode23, "$23 (ReadMemoryByAddress)", Pids),
         };
 
         // Re-evaluate Mode2D alias collisions whenever rows are added,
@@ -106,6 +107,28 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
         ClearBinCommand = new RelayCommand(ClearBin, () => !string.IsNullOrEmpty(Model.FlashBinPath));
         AutoPopulateDidsCommand = new RelayCommand(AutoPopulateMissingDids);
         EditPrimeCommand = new RelayCommand(EditPrime, () => primeContext != null && bus != null);
+
+        // Render the per-stack diagnostic-service checklist (Advanced tab). Rebuilt whenever the
+        // persona or the physical request CAN id changes, since both re-synthesise the bindings.
+        RebuildDiagnosticStacks();
+
+        // Hide the PID-mode sections the current persona doesn't speak (Ford -> no $1A / $2D).
+        RefreshSectionVisibility();
+    }
+
+    // Show only the PID-mode sections whose SID is in the current persona's service catalog. GMW3110 carries all four
+    // editable modes ($1A / $22 / $2D / $23); the Ford UDS catalog carries $22 and $23 only (UDS dropped $1A for $22 and
+    // folded $2D into $2C, but kept $23 ReadMemoryByAddress), so the GM-only $1A and $2D sections collapse when Ford is
+    // selected while $22 and $23 stay. This matches the wire behaviour - FordUdsDispatch doesn't dispatch $1A/$2D and
+    // Mode 09 has its own store, but $23 is served (from a Mode23 row or the loaded flash bin) - so a hidden section also
+    // plays no part. Rows are only hidden, never deleted: switching persona back reveals them and Save round-trips them.
+    private void RefreshSectionVisibility()
+    {
+        var catalog = Model.PersonaId == "ford-uds"
+            ? Core.Protocol.StandardCatalogs.Ford
+            : Core.Protocol.StandardCatalogs.Gmw3110;
+        foreach (var section in Sections)
+            section.IsVisible = catalog.Contains(section.Sid);
     }
 
     // -------- Prime wizard re-entry --------
@@ -188,7 +211,11 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
 
     /// <summary>True only for ECUs running the Ford UDS persona (the DMR map is meaningless
     /// otherwise). Drives the visibility of the DMR mapping section in the editor.</summary>
-    public bool IsFordUdsPersona => Model.Persona.Id == "ford-uds";
+    public bool IsFordUdsPersona => Model.PersonaId == "ford-uds";
+
+    /// <summary>True for the GM (GMW3110) persona. Drives the visibility of the GM-only
+    /// flash-READ dialect ("Read as") picker under the security-module dropdown.</summary>
+    public bool IsGmPersona => Model.PersonaId == "gmw3110";
 
     public DmrSignalMappingViewModel? SelectedDmrMapping
     {
@@ -304,7 +331,7 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
     public ushort PhysicalRequestCanId
     {
         get => Model.PhysicalRequestCanId;
-        set { if (Model.PhysicalRequestCanId != value) { Model.PhysicalRequestCanId = value; OnPropertyChanged(); OnPropertyChanged(nameof(PhysicalRequestCanIdHex)); } }
+        set { if (Model.PhysicalRequestCanId != value) { Model.PhysicalRequestCanId = value; OnPropertyChanged(); OnPropertyChanged(nameof(PhysicalRequestCanIdHex)); RebuildDiagnosticStacks(); } }
     }
 
     public string PhysicalRequestCanIdHex
@@ -385,16 +412,17 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
     private void ClearBin()
     {
         FlashBinPath = null;
-        if (Model.Persona.Id == "ford-uds")
-            Core.Ecu.Personas.FordUdsPersona.LoadFlashBin((byte[]?)null);
+        if (Model.PersonaId == "ford-uds")
+            Core.Protocol.FordUdsDispatch.LoadFlashBin((byte[]?)null);
     }
 
     private void LoadInfoFromBin()
     {
         var settings = AppSettings.Load();
+        bool isFord = Model.PersonaId == "ford-uds";
         var picker = new OpenFileDialog
         {
-            Title = "Pick a GM ECU flash image",
+            Title = isFord ? "Pick a Ford PCM flash image" : "Pick a GM ECU flash image",
             Filter = "ECU bin (*.bin)|*.bin|All files|*.*",
             InitialDirectory = AppSettings.ResolveInitialDir(settings.LastBinDir),
         };
@@ -408,6 +436,15 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
         {
             settings.LastBinDir = chosenDir;
             settings.Save();
+        }
+
+        // Ford persona: the bin is a Ford PCM (Spanish Oak) image with no GM service dispatcher or $1A DID
+        // table, so the GM identity flow below (the "$1A DIDs" overwrite prompt + GM extractor) doesn't apply.
+        // Take a Ford-shaped path that seeds the Mode 09 store from the bin instead.
+        if (isFord)
+        {
+            LoadBinForFordPersona(picker.FileName);
+            return;
         }
 
         // Ask the user which load mode to use BEFORE touching the file - if
@@ -442,13 +479,10 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
             return;
         }
 
-        // The picked bin is also this ECU's flash source: record the path (round-trips
-        // via ConfigStore.FlashBinPath) and, for the ford-uds persona, push the
-        // bytes live so $23 reads serve them this session without a config reload. Done
-        // before identity parsing so the flash source sticks even if extraction fails.
+        // The picked bin is this GM ECU's flash source: record the path (round-trips via
+        // ConfigStore.FlashBinPath). Done before identity parsing so the flash source sticks even if
+        // extraction fails. (The Ford persona took its own branch above and never reaches here.)
         FlashBinPath = picker.FileName;
-        if (Model.Persona.Id == "ford-uds")
-            Core.Ecu.Personas.FordUdsPersona.LoadFlashBin(bytes);
 
         var result = Mode1ADidBinExtractor.Parse(bytes);
         if (result == null)
@@ -509,6 +543,47 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
         MessageBox.Show(string.Join(Environment.NewLine, lines),
             "Load Info From Bin", MessageBoxButton.OK, MessageBoxImage.Information);
     }
+
+    // Ford-persona bin load. The chosen .bin is a Ford PCM (Spanish Oak) image: it carries no GM service
+    // dispatcher / $1A DID table, so the GM identity extractor doesn't apply and there are no $1A DIDs to
+    // overwrite. Record it as the flash source, push it live so $23 ReadMemoryByAddress serves it this session,
+    // then seed the persona's dedicated Mode 09 store - VIN (InfoType $02) from bin window 0x000100C0 and
+    // Calibration ID (InfoType $04) from 0x00010046 - so a $09 reply matches a $23 read of the same address.
+    private void LoadBinForFordPersona(string path)
+    {
+        byte[] bytes;
+        try
+        {
+            bytes = File.ReadAllBytes(path);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Could not read file:\n{ex.Message}", "Load Info From Bin",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+
+        // Record + push the bin before seeding: SeedMode09Identity reads the VIN/CalID windows out of the
+        // just-loaded flash backing (falling back to the known-good FG strings if a window isn't present).
+        FlashBinPath = path;
+        Core.Protocol.FordUdsDispatch.LoadFlashBin(bytes);
+        Core.Protocol.FordUdsDispatch.SeedMode09Identity(Model);
+
+        // Read back exactly what was seeded for the summary (same store $09 answers from).
+        string vin   = AsciiOf(Model.GetMode09Info(0x02));
+        string calId = AsciiOf(Model.GetMode09Info(0x04));
+
+        MessageBox.Show(
+            "Loaded Ford PCM flash image as this ECU's $23 source and seeded the Mode 09 identity " +
+            "from the bin:\n\n" +
+            $"VIN (Mode $09 InfoType $02, bin 0x000100C0): {vin}\n" +
+            $"Calibration ID (Mode $09 InfoType $04, bin 0x00010046): {calId}",
+            "Load Info From Bin", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    // Render a Mode 09 store value as ASCII for the load summary; "(none)" when the InfoType is unset.
+    private static string AsciiOf(byte[]? bytes)
+        => bytes is { Length: > 0 } ? System.Text.Encoding.ASCII.GetString(bytes) : "(none)";
 
     // Mirrors the runtime identifier dictionary (just written by BinIdentificationApplier.Apply) into editable
     // Mode1A Pid rows so the bin's identity shows in the editor's $1A section, persists in config, and is the value
@@ -722,6 +797,82 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
             if (Model.RamReadReturnsZeros != value)
             {
                 Model.RamReadReturnsZeros = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    /// <summary>
+    /// When ticked, a Ford $A1 SETUP_DMR for a RAM address that has no row in the
+    /// $A1 grid is rejected with NRC $31 RequestOutOfRange instead of the positive
+    /// E1 echo. Ford UDS persona only. Default off (accept any address) so the
+    /// capture/datalog flow keeps working without pre-wiring every address.
+    /// </summary>
+    public bool RejectUnmappedDmr
+    {
+        get => Model.RejectUnmappedDmr;
+        set
+        {
+            if (Model.RejectUnmappedDmr != value)
+            {
+                Model.RejectUnmappedDmr = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Modelled processing latency (ms) applied to every diagnostic response on
+    /// this ECU. 0 = instant (the default). Above the active stack's P2 the ECU
+    /// emits 7F sid 78 ResponsePending heartbeats to P2* (unless
+    /// <see cref="Emit78WhenSlow"/> is off). See EcuNode.ResponseDelayMs.
+    /// </summary>
+    public int ResponseDelayMs
+    {
+        get => Model.ResponseDelayMs;
+        set
+        {
+            var v = value < 0 ? 0 : value;
+            if (Model.ResponseDelayMs != v)
+            {
+                Model.ResponseDelayMs = v;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Emit 7F sid 78 RCR-RP when a response is slower than P2 (default on,
+    /// spec-correct). Off models an ECU that goes quiet then answers when done -
+    /// needed for hosts that reject a pending reply. See EcuNode.Emit78WhenSlow.
+    /// </summary>
+    public bool Emit78WhenSlow
+    {
+        get => Model.Emit78WhenSlow;
+        set
+        {
+            if (Model.Emit78WhenSlow != value)
+            {
+                Model.Emit78WhenSlow = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Per-ECU override (ms) of the session (P3C / S3) timeout, or 0 to use the
+    /// active stack's TimingProfile default. See EcuNode.SessionTimeoutOverrideMs.
+    /// </summary>
+    public int SessionTimeoutOverrideMs
+    {
+        get => Model.SessionTimeoutOverrideMs ?? 0;
+        set
+        {
+            var v = value < 0 ? 0 : value;
+            int? stored = v == 0 ? null : v;
+            if (Model.SessionTimeoutOverrideMs != stored)
+            {
+                Model.SessionTimeoutOverrideMs = stored;
                 OnPropertyChanged();
             }
         }
@@ -999,26 +1150,66 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
     /// </summary>
     public IReadOnlyList<PersonaOption> AvailablePersonas => SharedPersonas;
 
+    // ---------------- Flash-READ dialect ("Read as", GM persona only) ----------------
+
+    private static readonly IReadOnlyList<ReadFamilyOption> SharedReadFamilies = new[]
+    {
+        new ReadFamilyOption(ReadKernelFamily.E38E67, "E38 / E67"),
+        new ReadFamilyOption(ReadKernelFamily.T43,    "T43"),
+    };
+
     /// <summary>
-    /// The persona this single ECU presents on the wire, bound two-way to the
-    /// Advanced-tab dropdown. Getter reflects the live Model.Persona (so a
-    /// config load with PersonaId = "ford-uds" shows "Ford"); setter swaps
-    /// the dispatch table on this ECU only and resets its security state, the
-    /// same way a security-module change does - a prior persona's unlock must
-    /// not leak into the new dispatcher. A runtime-only persona (uds-kernel)
-    /// reads back as null, leaving the dropdown blank until the user picks one.
+    /// Flash-READ dialects a user can pick for THIS ECU in the Advanced tab
+    /// (shown under the security-module dropdown, GM persona only). Decides how a
+    /// $35/$36 read is answered: E38/E67 = PowerPCM native upload, T43 = the
+    /// 6Speed.T43 read-kernel. See <see cref="ReadKernelFamily"/>.
+    /// </summary>
+    public IReadOnlyList<ReadFamilyOption> AvailableReadFamilies => SharedReadFamilies;
+
+    /// <summary>
+    /// Selected flash-READ dialect for this ECU. Getter reflects the live
+    /// Model.ReadFamily; setter changes it on this ECU only. Purely a config
+    /// knob - it doesn't touch security or dispatch bindings, so no reset is
+    /// needed. Persisted per-ECU via EcuDto.ReadFamily.
+    /// </summary>
+    public ReadFamilyOption? SelectedReadFamily
+    {
+        get => AvailableReadFamilies.FirstOrDefault(o => o.Id == Model.ReadFamily);
+        set
+        {
+            if (value is null || value.Id == Model.ReadFamily) return;
+            Model.ReadFamily = value.Id;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>
+    /// The diagnostic standard set this single ECU speaks, bound two-way to the
+    /// Advanced-tab dropdown. Getter reflects the live Model.PersonaId (so a
+    /// config load with PersonaId = "ford-uds" shows "Ford"); setter changes the
+    /// standard on this ECU only - which re-synthesises its protocol-stack bindings -
+    /// and resets its security state, the same way a security-module change does,
+    /// so a prior standard's unlock can't leak across. An unrecognised id reads
+    /// back as null, leaving the dropdown blank until the user picks one.
     /// </summary>
     public PersonaOption? SelectedPersonaOption
     {
-        get => AvailablePersonas.FirstOrDefault(o => o.Id == Model.Persona.Id);
+        get => AvailablePersonas.FirstOrDefault(o => o.Id == Model.PersonaId);
         set
         {
             if (value is null) return;
-            if (value.Id == Model.Persona.Id) return;
-            Model.Persona = Core.Ecu.Personas.PersonaRegistry.Resolve(value.Id);
+            if (value.Id == Model.PersonaId) return;
+            Model.PersonaId = value.Id;
             OnPropertyChanged();
-            // The DMR signal map section is Ford-persona-only; re-announce its visibility.
+            // The DMR signal map section is Ford-persona-only and the "Read as"
+            // flash-read picker is GM-persona-only; re-announce both visibilities.
             OnPropertyChanged(nameof(IsFordUdsPersona));
+            OnPropertyChanged(nameof(IsGmPersona));
+            // Switching persona re-synthesises the stack bindings (Ford catch-all UDS vs GM
+            // J1979+GMW3110), so rebuild the per-service checklist to match.
+            RebuildDiagnosticStacks();
+            // GMW3110-only PID-mode sections ($1A / $2D) hide under the Ford persona and reappear under GM.
+            RefreshSectionVisibility();
             // The $22 Identifier picker is persona-scoped (GM vs Ford library),
             // so re-announce every row's catalogue to repopulate the dropdowns.
             NotifyIdentifierSetChanged();
@@ -1026,7 +1217,111 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
             // table is a fresh start, so clear any unlock / pending seed /
             // lockout state left over from the previous persona.
             ResetSecurityState();
+            // A persona change replaces the bound standards. Drop any service
+            // overrides keyed to the previous persona's standards so they don't
+            // linger in serviceOverrides and get persisted as stale Stacks
+            // entries (e.g. GMW3110 / J1979 deltas surviving a switch to Ford,
+            // where they are inert at dispatch but misrepresent the saved config).
+            var keep = new HashSet<string>(
+                Model.SynthesizedDefaults().Select(d => d.Stack.Standard), StringComparer.Ordinal);
+            foreach (var standard in Model.ServiceOverrides?.Keys.ToList() ?? new List<string>())
+                if (!keep.Contains(standard))
+                    Model.SetServiceOverride(standard, null);
         }
+    }
+
+    // ---------------- Diagnostic-service checklist (per-stack allow-list) ----------------
+
+    /// <summary>
+    /// The per-stack diagnostic-service checklist shown in the Advanced tab (DESIGN doc section 6).
+    /// One SECTION per bound standard for a GM node (J1979, GMW3110); for the Ford capture node the
+    /// single catch-all binding is split into one section per display group (OBD, UDS, Ford-
+    /// proprietary), all sharing the one "Ford" override - so it has the same segmented shape as GM.
+    /// Each section renders a tick per service; toggling persists only the delta off the synthesized
+    /// default via <see cref="ApplyStackServiceSelection"/>. Rebuilt on persona / CAN-id change.
+    /// </summary>
+    public ObservableCollection<StackBindingViewModel> DiagnosticStacks { get; } = new();
+
+    // Per-standard full catalog + synthesized default, stashed when DiagnosticStacks is (re)built so
+    // ApplyStackServiceSelection can recompute the single per-standard override from the live ticks -
+    // even when one standard is rendered as several segment sections (the Ford catch-all).
+    private readonly Dictionary<string, (Core.Protocol.ServiceCatalog Catalog, HashSet<byte> Default)> stackCatalogs = new();
+
+    /// <summary>
+    /// Repopulate <see cref="DiagnosticStacks"/> from the ECU's synthesized default bindings, with
+    /// each service's tick state taken from the effective filter (the saved override if any, else the
+    /// synthesized default). A catch-all (Ford) binding is split into one section per display group;
+    /// the synthesized defaults are also what the checklist compares against so it stores only the delta.
+    /// </summary>
+    public void RebuildDiagnosticStacks()
+    {
+        DiagnosticStacks.Clear();
+        stackCatalogs.Clear();
+        foreach (var def in Model.SynthesizedDefaults())
+        {
+            var standard = def.Stack.Standard;
+            var catalog = def.Stack.Catalog;
+            var effective = Model.GetServiceOverride(standard) ?? def.Enabled;
+            stackCatalogs[standard] = (catalog, new HashSet<byte>(catalog.Sids.Where(def.Enabled.Allows)));
+
+            if (def.CatchAll)
+            {
+                // Segment a catch-all (Ford) catalog into its display groups so the editor shows OBD,
+                // UDS, and Ford-proprietary as separate sections - the same shape GM gets from its
+                // J1979 + GMW3110 bindings. Every segment shares the one standard ("Ford") override.
+                foreach (var (header, services) in GroupForDisplay(catalog))
+                    DiagnosticStacks.Add(new StackBindingViewModel(this, standard, header,
+                        services.Select(d => (d.Sid, d.Name, effective.Allows(d.Sid))), note: null));
+            }
+            else
+            {
+                DiagnosticStacks.Add(new StackBindingViewModel(this, standard, standard,
+                    catalog.Services.Select(d => (d.Sid, d.Name, effective.Allows(d.Sid))), note: null));
+            }
+        }
+    }
+
+    // Group a catalog's services by display group, preserving first-appearance (SID) order. A null
+    // group (the UDS services folded into the Ford catalog) shows under "UDS".
+    private static IEnumerable<(string Header, List<Core.Protocol.ServiceDescriptor> Services)>
+        GroupForDisplay(Core.Protocol.ServiceCatalog catalog)
+    {
+        var order = new List<string>();
+        var map = new Dictionary<string, List<Core.Protocol.ServiceDescriptor>>();
+        foreach (var d in catalog.Services)
+        {
+            var key = d.Group ?? "UDS";
+            if (!map.TryGetValue(key, out var list)) { map[key] = list = new(); order.Add(key); }
+            list.Add(d);
+        }
+        foreach (var key in order) yield return (key, map[key]);
+    }
+
+    /// <summary>
+    /// Recompute and persist one standard's allow-list from the live ticks across EVERY section that
+    /// shares it (the Ford segments combine here), storing only the delta off the synthesized default:
+    /// ticks identical to the default clear the override (keeps the config quiet); ticks covering the
+    /// whole catalog become the wildcard "*"; otherwise an explicit allow-list. Called by
+    /// <see cref="StackBindingViewModel.OnServiceToggled"/>.
+    /// </summary>
+    internal void ApplyStackServiceSelection(string standard)
+    {
+        if (!stackCatalogs.TryGetValue(standard, out var info)) return;
+
+        var enabled = new HashSet<byte>();
+        foreach (var section in DiagnosticStacks)
+            if (section.Standard == standard)
+                foreach (var svc in section.Services)
+                    if (svc.IsEnabled) enabled.Add(svc.Sid);
+
+        Core.Protocol.IServiceFilter? filter;
+        if (enabled.SetEquals(info.Default))
+            filter = null;                                       // back to default -> drop the override
+        else if (enabled.Count == info.Catalog.Count)
+            filter = Core.Protocol.AllServices.Instance;         // everything enabled -> wildcard
+        else
+            filter = new Core.Protocol.SidAllowList(enabled);    // an explicit jump-table subset
+        Model.SetServiceOverride(standard, filter);
     }
 
     // ---------------- Security ($27) ----------------
@@ -1087,8 +1382,9 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
     /// state" button across the workspace tabs - keep all such buttons routed
     /// through here so they stay in sync.
     ///
-    /// Note: $20 alone is spec-correct to NOT touch security (GMW3110 §8.5.6.2),
-    /// so EcuExitLogic deliberately omits it; the power-cycle delta is added here.
+    /// Note: EcuExitLogic.Run already re-locks security per GMW3110 §8.5.6.2
+    /// (both the $20 and P3C-timeout branches end locked); the ResetSecurityState
+    /// call here is what pushes the immediate UI refresh after that re-lock.
     /// </summary>
     public void ResetEcuState(DpidScheduler scheduler)
     {
@@ -1106,16 +1402,9 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
     /// </summary>
     public void ResetSecurityState()
     {
-        var s = Model.State;
-        lock (s.Sync)
-        {
-            s.SecurityUnlockedLevel = 0;
-            s.SecurityPendingSeedLevel = 0;
-            s.SecurityLastIssuedSeed = null;
-            s.SecurityFailedAttempts = 0;
-            s.SecurityLockoutUntilMs = 0;
-            s.SecurityModuleState = null;
-        }
+        // Delegates to NodeState.ResetSecurity so this button and the spec
+        // teardown (EcuExitLogic.Run) share one re-lock implementation.
+        Model.State.ResetSecurity();
         // The 10Hz refresh tick would catch this within 100ms; push an
         // immediate update so the click feels instant.
         RefreshSecurity(0);

@@ -143,20 +143,34 @@ public static class ConfigStore
         FlashTransferDelayMs = node.FlashTransferDelayMs,
         FlashEraseDelayMs = node.FlashEraseDelayMs,
         RamReadReturnsZeros = node.RamReadReturnsZeros,
+        RejectUnmappedDmr = node.RejectUnmappedDmr,
+        // GM flash-read dialect. Persist only when it diverges from the default
+        // (E38E67) so standard configs stay quiet.
+        ReadFamily = node.ReadFamily == ReadKernelFamily.E38E67 ? null : "t43",
+        // Keep standard configs quiet (WhenWritingNull): write each knob only when
+        // it diverges from the default - ResponseDelayMs 0, Emit78WhenSlow true, no
+        // session-timeout override.
+        ResponseDelayMs = node.ResponseDelayMs == 0 ? null : node.ResponseDelayMs,
+        Emit78WhenSlow = node.Emit78WhenSlow ? null : false,
+        SessionTimeoutOverrideMs = node.SessionTimeoutOverrideMs,
         // Persist persona id only when it diverges from the default
         // (gmw3110). Saves a noisy "PersonaId": "gmw3110" line on every
         // ECU in the standard config and keeps diffs stable.
-        PersonaId = node.Persona.Id == "gmw3110" ? null : node.Persona.Id,
-        // FlashBinPath is per-persona (Ford UDS only) and EcuNode
-        // doesn't carry the path back (LoadFlashBin replaces the static
-        // bytes on the persona, not on the node). We DO persist the
+        PersonaId = node.PersonaId == "gmw3110" ? null : node.PersonaId,
+        // Protocol-stack service-allow-list overrides, as a delta off the synthesized default.
+        // Null when the node carries no overrides (its bindings are pure synthesis), so standard
+        // configs stay quiet. See ComputeStackDtos.
+        Stacks = ComputeStackDtos(node),
+        // FlashBinPath is Ford-UDS-stack-only and EcuNode
+        // doesn't carry the path back (FordUdsDispatch.LoadFlashBin replaces the
+        // static bytes on the dispatch singleton, not on the node). We DO persist the
         // node's user-set FlashBinPath via the side-channel below so a
         // round-trip through the editor doesn't drop the field. Without
         // this, the auto-save path the WPF runs would strip the field
         // and the next launch would fail Service $23 with NRC $22.
         FlashBinPath = node.FlashBinPath,
         // AllPids unions every mode-keyed store with deterministic ordering
-        // (Mode22 -> Mode2D -> Mode1A -> Mode1, each by key) so saved-config
+        // (Mode22 -> Mode2D -> Mode23 -> Mode1A, each by key) so saved-config
         // diffs stay stable across runs.
         Pids = node.AllPids.Select(PidDtoFrom).ToList(),
         // Persist the boot operating point only when it diverges from the default Idle (keeps standard configs quiet).
@@ -194,13 +208,21 @@ public static class ConfigStore
             FlashTransferDelayMs = dto.FlashTransferDelayMs,
             FlashEraseDelayMs = dto.FlashEraseDelayMs,
             RamReadReturnsZeros = dto.RamReadReturnsZeros,
+            RejectUnmappedDmr = dto.RejectUnmappedDmr,
+            // GM flash-read dialect. "t43" -> T43 read-kernel; anything else
+            // (incl. absent in older configs) -> E38E67, the native-upload default.
+            ReadFamily = string.Equals(dto.ReadFamily, "t43", StringComparison.OrdinalIgnoreCase)
+                ? ReadKernelFamily.T43 : ReadKernelFamily.E38E67,
+            ResponseDelayMs = dto.ResponseDelayMs ?? 0,
+            // Absent (older config) -> true: spec-correct 78 pending behaviour.
+            Emit78WhenSlow = dto.Emit78WhenSlow ?? true,
+            SessionTimeoutOverrideMs = dto.SessionTimeoutOverrideMs,
         };
         node.SecurityModule = SecurityModuleRegistry.Create(dto.SecurityModuleId);
         node.SecurityModule?.LoadConfig(dto.SecurityModuleConfig);
-        // Persona resolution. Missing / unknown -> Gmw3110Persona (the
-        // standard default for every GM ECU). The Ford UDS preset uses
-        // PersonaId = "ford-uds" to swap in the logging dispatcher.
-        node.Persona = Core.Ecu.Personas.PersonaRegistry.Resolve(dto.PersonaId);
+        // Standard discriminator. Missing / unknown -> "gmw3110" (the standard default for every
+        // GM ECU). The Ford UDS preset uses PersonaId = "ford-uds" to select the UDS capture stack.
+        node.PersonaId = dto.PersonaId == "ford-uds" ? "ford-uds" : "gmw3110";
         // Ford UDS only: load the flash bin if a path was supplied.
         // Other personas ignore FlashBinPath. We throw on missing / unreadable
         // so config-load failures are loud - $23 silently NRC-ing against a
@@ -208,13 +230,20 @@ public static class ConfigStore
         node.FlashBinPath = dto.FlashBinPath;
         if (dto.PersonaId == "ford-uds" && !string.IsNullOrWhiteSpace(dto.FlashBinPath))
         {
-            Core.Ecu.Personas.FordUdsPersona.LoadFlashBin(dto.FlashBinPath!);
+            Core.Protocol.FordUdsDispatch.LoadFlashBin(dto.FlashBinPath!);
         }
         foreach (var pidDto in dto.Pids)
         {
             // AddPid routes by pid.Mode into the appropriate per-mode store.
             node.AddPid(PidFrom(pidDto));
         }
+        // Seed the dedicated Mode $09 store (Service09Handler's only source). Done AFTER the PID/identifier rows load so
+        // the GM projection can read the just-loaded $1A identity. Ford keeps its own store sourced from the flash bin -
+        // it doesn't implement $1A, so a GM/Holden $90 row left in a ford-uds config can no longer leak into the $09 VIN.
+        if (node.PersonaId == "ford-uds")
+            Core.Protocol.FordUdsDispatch.SeedMode09Identity(node);   // VIN/CALID from the bin window
+        else
+            Core.Services.Service09Handler.SeedFromIdentity(node);    // GM: project $1A $90/$C0 once
         // Restore the DBC broadcast set (absent -> none).
         if (dto.Broadcasts is { } broadcasts)
             node.ReplaceBroadcasts(broadcasts.Select(BroadcastMessageFrom));
@@ -232,7 +261,62 @@ public static class ConfigStore
         // empty -> the full default subset stands.
         if (dto.Mode1Disabled is { Count: > 0 } disabled)
             node.Mode1Supported = new HashSet<byte>(J1979Catalogue.DefaultSupported.Except(disabled));
+        // Re-apply the protocol-stack service-allow-list overrides (absent -> pure synthesis).
+        ApplyStackOverrides(node, dto.Stacks);
         return node;
+    }
+
+    // ---- Protocol-stack service-allow-list overrides (EcuDto.Stacks, DESIGN doc section 6) ----
+
+    // Snapshot the node's per-standard service overrides as the persisted delta. Returns null when
+    // the node carries no overrides (the common case: its bindings are pure synthesis), so standard
+    // configs stay quiet. A wildcard override ("user enabled every service") serialises as Services
+    // = null ("*"); an explicit allow-list serialises as the SID hex strings.
+    private static List<StackDto>? ComputeStackDtos(EcuNode node)
+    {
+        if (node.ServiceOverrides is not { Count: > 0 } overrides) return null;
+        return overrides
+            .OrderBy(kv => kv.Key, StringComparer.Ordinal)
+            .Select(kv => new StackDto
+            {
+                Standard = kv.Key,
+                Services = kv.Value is Core.Protocol.SidAllowList list
+                    ? list.Sids.OrderBy(b => b).Select(b => $"0x{b:X2}").ToList()
+                    : null,   // AllServices wildcard
+            })
+            .ToList();
+    }
+
+    // Re-apply persisted stack overrides onto a freshly-built node. Each entry replaces one bound
+    // standard's enabled allow-list; a null / omitted Services is the wildcard "*", an explicit list
+    // is the SID allow-list. Unknown standards are stored but stay inert until a binding for that
+    // standard exists (forward-compat).
+    private static void ApplyStackOverrides(EcuNode node, List<StackDto>? stacks)
+    {
+        if (stacks is not { Count: > 0 }) return;
+        foreach (var s in stacks)
+        {
+            if (string.IsNullOrWhiteSpace(s.Standard)) continue;
+            node.SetServiceOverride(s.Standard, ParseServiceFilter(s.Services));
+        }
+    }
+
+    private static Core.Protocol.IServiceFilter ParseServiceFilter(List<string>? services)
+    {
+        if (services is null) return Core.Protocol.AllServices.Instance;   // "*" / omitted
+        var sids = new List<byte>(services.Count);
+        foreach (var token in services)
+            if (TryParseSid(token, out var sid)) sids.Add(sid);
+        return new Core.Protocol.SidAllowList(sids);
+    }
+
+    private static bool TryParseSid(string? token, out byte sid)
+    {
+        sid = 0;
+        var s = (token ?? "").Trim();
+        if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) s = s[2..];
+        return byte.TryParse(s, System.Globalization.NumberStyles.HexNumber,
+            System.Globalization.CultureInfo.InvariantCulture, out sid);
     }
 
     // The $01 supported set is stored as a delta off the built-in default

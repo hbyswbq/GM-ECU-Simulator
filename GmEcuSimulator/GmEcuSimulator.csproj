@@ -51,6 +51,68 @@
     <ApplicationIcon>Resources\app.ico</ApplicationIcon>
   </PropertyGroup>
 
+  <!-- ==========================================================================
+       Version stamping from the git tag.
+       The About menu (AppInfo.cs) reports the AssemblyInformationalVersion set
+       below, and because every GitHub release IS a git tag (v0.4.2, ...) the
+       displayed version always matches the release the build came from:
+         - clean checkout on a tag -> "0.4.2"
+         - N commits past the tag  -> "0.4.2-3-gabc1234"  (a dev build)
+         - working tree dirty      -> "...-dirty"
+       Publish-Release.ps1 overrides this by passing /p:Version=<tag> so a
+       release bundle is stamped with exactly its tag even if the publish runs
+       before the tag is pushed. A build with no git (e.g. from a source zip)
+       falls back to VersionFallback.
+       ========================================================================== -->
+  <PropertyGroup>
+    <!-- Safety net for git-less builds only; the tag is the real source of
+         truth. Keep roughly in step with the latest release. -->
+    <VersionFallback>0.4.2</VersionFallback>
+    <!-- Keep InformationalVersion exactly the git-describe string - don't let
+         the SDK append "+<commit-sha>". -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+
+  <Target Name="StampVersionFromGit"
+          BeforeTargets="GetAssemblyVersion"
+          Condition="'$(Version)' == '' or '$(Version)' == '1.0.0'">
+    <!-- Nearest tag + ahead-count + short hash. ContinueOnError so a missing
+         git / non-repo checkout never fails the build - we fall back below. -->
+    <Exec Command="git describe --tags --always --dirty"
+          ConsoleToMSBuild="true"
+          ContinueOnError="true"
+          StandardOutputImportance="low"
+          WorkingDirectory="$(MSBuildProjectDirectory)">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_GitDescribe" />
+      <Output TaskParameter="ExitCode" PropertyName="_GitExit" />
+    </Exec>
+
+    <!-- Strip the leading 'v' and split off the numeric core (the part before
+         the first '-') for the numeric AssemblyVersion / FileVersion. -->
+    <PropertyGroup Condition="'$(_GitExit)' == '0' and '$(_GitDescribe)' != ''">
+      <_Tag>$(_GitDescribe.TrimStart('v').Trim())</_Tag>
+      <_Dash>$(_Tag.IndexOf('-'))</_Dash>
+      <_Core Condition="'$(_Dash)' != '-1'">$(_Tag.Substring(0, $(_Dash)))</_Core>
+      <_Core Condition="'$(_Dash)' == '-1'">$(_Tag)</_Core>
+    </PropertyGroup>
+
+    <!-- Adopt the git value only when the numeric core looks like a real
+         version - guards the bare-hash case (no tags yet, describe returned
+         only a commit sha). -->
+    <PropertyGroup Condition="'$(_Core)' != '' and $([System.Text.RegularExpressions.Regex]::IsMatch($(_Core), '^\d+\.\d+(\.\d+)?$'))">
+      <Version>$(_Core)</Version>
+      <InformationalVersion>$(_Tag)</InformationalVersion>
+    </PropertyGroup>
+
+    <!-- git-less or untagged fallback. -->
+    <PropertyGroup Condition="'$(InformationalVersion)' == ''">
+      <Version>$(VersionFallback)</Version>
+      <InformationalVersion>$(VersionFallback)</InformationalVersion>
+    </PropertyGroup>
+
+    <Message Importance="normal" Text="GmEcuSimulator version stamped: $(InformationalVersion) (assembly $(Version))" />
+  </Target>
+
   <!-- Embed the icon as a WPF resource so XAML Icon="/Resources/app.ico"
        resolves at runtime in addition to the EXE shell icon set above. -->
   <ItemGroup>

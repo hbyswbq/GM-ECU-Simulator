@@ -1,7 +1,7 @@
 using Common.Protocol;
 using Core.Bus;
 using Core.Ecu;
-using Core.Ecu.Personas;
+using Core.Protocol;
 using Core.Persistence;
 using Core.Scheduler;
 using EcuSimulator.Tests.TestHelpers;
@@ -43,7 +43,7 @@ public sealed class ConnectionSwitchReinitTests
         node.State.ProgrammingModeActive = true;
         node.State.DownloadActive = true;
         node.State.TesterPresent.Activate();
-        node.Persona = UdsKernelPersona.Instance;
+        node.EnterKernelMode(Core.Protocol.ProtocolStacks.KernelBindingFor(node));
         bus.Scheduler.Add(node, node.State.Dpids[0xFE], NodeFactory.CreateChannel(), DpidRate.Slow);
 
         // Sanity: the state really is dirty.
@@ -62,7 +62,7 @@ public sealed class ConnectionSwitchReinitTests
         Assert.False(rebuilt.State.ProgrammingModeActive);
         Assert.False(rebuilt.State.DownloadActive);
         Assert.Equal(TesterPresentTimerState.Inactive, rebuilt.State.TesterPresent.State);
-        Assert.Same(Gmw3110Persona.Instance, rebuilt.Persona);         // persona reset
+        Assert.Equal("gmw3110", rebuilt.PersonaId);                    // standard reset to default
         Assert.NotNull(rebuilt.GetPid(0x000C));                        // config (the PID) survives
     }
 }

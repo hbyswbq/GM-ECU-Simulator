@@ -1,5 +1,4 @@
 using Core.Bus;
-using Core.Ecu.Personas;
 using Core.Security;
 using System.Text.Json;
 
@@ -96,7 +95,7 @@ public static class EcuNodeFactory
             UudtResponseCanId    = ids.UudtResponseId,
             DiagnosticAddress    = ids.DiagnosticAddress,
             ProgrammedState      = 0x00,   // FullyProgrammed, GMW3110 §8.16
-            Persona              = Gmw3110Persona.Instance,
+            PersonaId            = "gmw3110",
         };
 
         node.SecurityModule = SecurityModuleRegistry.Create(securityModuleId);

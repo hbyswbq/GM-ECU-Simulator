@@ -8,7 +8,8 @@ namespace Core.Services;
 // $01 ShowCurrentData per SAE J1979 (OBD-II Mode $01). Lives on the UDS-stack dispatcher on real GM silicon (see
 // memory file project_dual_diag_stack_e38_e67.md - $01 is index 0 of the 27-entry UDS SID table). The GMW3110
 // GMLAN-enhanced dispatcher does not implement it, so a tester on a GMW3110-only CAN ID gets NRC $11 - that gating
-// is done by the persona before this handler is reached.
+// is now structural: a GM node on a non-OBD CAN id binds only the restricted enhanced SID set, so $01 is simply not
+// owned there and EcuNode.Resolve NRC-$11s it before this handler is reached (see ProtocolStacks.SynthesizeFor).
 //
 // This is the signal-backed projection of the new ECU strategy: every value comes from the ECU's EngineModel (live,
 // scenario-driven signals) or its DiscreteState (status PIDs), encoded with the LEGISLATED J1979 formula in

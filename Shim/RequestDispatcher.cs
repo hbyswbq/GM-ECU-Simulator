@@ -66,7 +66,7 @@ public sealed class RequestDispatcher
     {
         var diag = state.Bus.LogJ2534;
         if (diag == null) return;
-        if (requestType == IpcMessageTypes.ReadMsgsRequest) return;     // host-poll: every ~10–100ms
+        if (requestType == IpcMessageTypes.ReadMsgsRequest) return;     // host-poll: every ~10-100ms
         if (requestType == IpcMessageTypes.GetLastErrorRequest) return; // follows almost every call
         if (requestType == IpcMessageTypes.CanaryRequest) return;       // internal startup handshake
 

@@ -38,7 +38,7 @@ namespace Core.Security.Algorithms;
 // hardware should be added there as additional Theory inputs when available.
 //
 // Configuration (optional, via SecurityModuleConfig JsonElement):
-//     { "fixedSeed": "1234" }   // hex, 4 chars — locks the seed for repeatable testing
+//     { "fixedSeed": "1234" }   // hex, 4 chars - locks the seed for repeatable testing
 // No fixedSeed -> Random.Shared.NextBytes per request (more realistic).
 public sealed class E38Algorithm : ISeedKeyAlgorithm
 {
@@ -58,7 +58,7 @@ public sealed class E38Algorithm : ISeedKeyAlgorithm
         else
         {
             Random.Shared.NextBytes(seedBuffer.Slice(0, 2));
-            // Avoid an all-zero seed — the generic module treats seed-all-zero
+            // Avoid an all-zero seed - the generic module treats seed-all-zero
             // as "already unlocked", which would confuse a tester that just
             // asked for a fresh seed on a locked ECU.
             if (seedBuffer[0] == 0 && seedBuffer[1] == 0) seedBuffer[0] = 1;

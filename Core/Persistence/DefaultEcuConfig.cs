@@ -11,7 +11,7 @@ namespace Core.Persistence;
 // stays out of the way.
 //
 // CAN ID convention: GMW3110's worked examples use the legacy GMLAN pairs
-// $241/$641, $242/$642, etc. — that's the spec's pedagogical convention,
+// $241/$641, $242/$642, etc. - that's the spec's pedagogical convention,
 // not what's deployed. Real OBD-II-compliant GM vehicles (and the sibling
 // DataLogger project's eNodeType values: ECM=$7E8, TCM=$7E9, BCM=$7EA,
 // FPCM=$7EB) use the standardised $7E0+/$7E8+ pairs:

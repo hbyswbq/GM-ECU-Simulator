@@ -19,7 +19,7 @@ namespace Core.Services;
 //   $40 ... Op-code $25 variant - same shape.
 // All CPIDs get a permissive positive echo. Hosts that care about specific
 // return records will surface as a goto mismatch in the utility-file log;
-// at that point we plumb a CPID-specific path through the persona/config.
+// at that point we plumb a CPID-specific path through the ECU config.
 //
 // Functional addressing: $AE is point-to-point in every spec example
 // (§8.21.5.1 uses physical $241). On functional we stay silent.

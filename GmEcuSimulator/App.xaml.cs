@@ -85,7 +85,7 @@ public partial class App : Application
         bus.LogJ2534 = s => GmEcuSimulator.MainWindow.AppendJ2534Log(s);
         bus.LogSim   = s => GmEcuSimulator.MainWindow.AppendSimLog(s);
 
-        // High-prominence status sink — currently only rejected non-CAN
+        // High-prominence status sink - currently only rejected non-CAN
         // connect attempts. Routed to the status bar at the bottom of the
         // main window so a third-party tester user can see why their host
         // got ERR_INVALID_PROTOCOL_ID back from PassThruConnect.

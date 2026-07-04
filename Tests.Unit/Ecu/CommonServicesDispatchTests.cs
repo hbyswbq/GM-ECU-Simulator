@@ -3,22 +3,21 @@ using Common.Protocol;
 using Common.Waveforms;
 using Core.Bus;
 using Core.Ecu;
-using Core.Ecu.Personas;
+using Core.Protocol;
 using EcuSimulator.Tests.TestHelpers;
 using Xunit;
 
 namespace EcuSimulator.Tests.Ecu;
 
-// CommonServices is the shared, stack-neutral dispatch layer VirtualBus.DispatchUsdt
-// consults after the active persona declines a SID and before NRC $11. $22
-// ReadDataByParameterIdentifier / ReadDataByIdentifier is identical across the
-// GMW3110 and UDS stacks, so EVERY persona must answer it the same way - via
-// the persona-agnostic Service22Handler - not NRC it.
+// $22 ReadDataByIdentifier is identical across the GMW3110 and UDS stacks, so a
+// Ford ECU must answer it the same way - via the persona-agnostic Service22Handler -
+// not NRC it. Since the protocol-stack migration, the Ford UDS stack's dispatch
+// (ProtocolStacks.DispatchUds) serves $22 directly (the old shared CommonServices
+// fallback is gone); these tests pin that down end to end.
 //
-// These drive the real inbound path (DispatchHostTx -> reassembler ->
-// DispatchUsdt -> persona/common) against the Ford persona, which previously
-// NRC'd $22 inline. The FordUdsPersona singleton carries process-wide static
-// state, so join its collection.
+// They drive the real inbound path (DispatchHostTx -> reassembler -> DispatchUsdt
+// -> Resolve -> the Ford catch-all UDS binding). The Ford capture state is
+// process-wide static, so join its collection.
 [Collection(FordUdsPersonaCollection.Name)]
 public sealed class CommonServicesDispatchTests
 {
@@ -38,7 +37,7 @@ public sealed class CommonServicesDispatchTests
     private static (VirtualBus bus, ChannelSession ch) FordBus(EcuNode node)
     {
         var bus = new VirtualBus();
-        node.Persona = FordUdsPersona.Instance;
+        node.PersonaId = "ford-uds";
         bus.AddNode(node);
         var ch = new ChannelSession { Id = 1, Protocol = ProtocolID.CAN, Baud = 500_000, Bus = bus };
         return (bus, ch);
@@ -81,10 +80,14 @@ public sealed class CommonServicesDispatchTests
     }
 
     [Fact]
-    public void FordPersona_UnknownSid_StillNrc11_AtBusLayer()
+    public void FordPersona_NotPresentSid_IsLoggedThenNrc11()
     {
-        // A genuinely unsupported service ($99) is declined by both the persona
-        // and CommonServices, so DispatchUsdt emits NRC $11.
+        // A SID the Ford persona doesn't implement ($99, absent from the Ford catalog) is logged by
+        // the capture stack, then declined so the bus NRC-$11s it - matching a real Ford PCM, which
+        // answers serviceNotSupported to any unsupported physically-addressed service rather than
+        // sitting silent (which would force the tester through its P2 timeout). Catalog membership is
+        // an internal modelling artifact with no on-wire correlate, so an out-of-catalog probe gets the
+        // same NRC $11 an in-catalog-but-unhandled SID does.
         var (bus, ch) = FordBus(NodeFactory.CreateNode());
 
         bus.DispatchHostTx(WrapCanFrame(PhysReq, new byte[] { 0x01, 0x99 }), ch);

@@ -5,11 +5,11 @@ using Core.Ecu;
 namespace Core.Services.Uds;
 
 // $31 RoutineControl per ISO 14229-1:2020 §11.7. NOT a GMW3110-2010 service -
-// only reachable when an EcuNode's Persona is UdsKernelPersona, which the
-// simulator activates after a successful $36 sub $80 DownloadAndExecute hands
-// the bus to a GM SPS programming kernel (powerpcm_flasher etc.). Baseline
-// GMW3110 ECUs answer $31 with NRC $11 ServiceNotSupported via the
-// IDiagnosticPersona default-false return path.
+// only reachable while an EcuNode is in kernel mode (the transient UDS-kernel
+// stack binding the simulator pushes after a successful $36 sub $80
+// DownloadAndExecute hands the bus to a GM SPS programming kernel,
+// powerpcm_flasher etc.). Baseline GMW3110 ECUs do not bind $31 at all, so they
+// answer it with NRC $11 ServiceNotSupported via the dispatch fall-through.
 //
 // Wire format (ISO 14229 §11.7.2 Table 421):
 //   Request:  [$31][sub][routineId hi][routineId lo][optionRecord 0..n]
@@ -95,12 +95,11 @@ public static class Service31Handler
             return false;
         }
 
-        // Defence-in-depth: the persona swap to UdsKernelPersona happens after
-        // $36 sub $80 DownloadAndExecute, which in turn presupposes a $34
-        // RequestDownload, which presupposes $27 unlock. So a kernel call
-        // arriving here while locked is impossible in normal flows. Still
-        // enforce explicitly so a test/UI that pokes node.Persona directly
-        // can't accidentally bypass the unlock.
+        // Defence-in-depth: the kernel-mode handover happens after $36 sub $80
+        // DownloadAndExecute, which in turn presupposes a $34 RequestDownload,
+        // which presupposes $27 unlock. So a kernel call arriving here while
+        // locked is impossible in normal flows. Still enforce explicitly so a
+        // test/UI that pushes the kernel binding directly can't bypass the unlock.
         if (node.State.SecurityUnlockedLevel == 0)
         {
             ServiceUtil.EnqueueNrc(node, ch, sid, Nrc.SecurityAccessDenied);
@@ -186,13 +185,33 @@ public static class Service31Handler
         return true;
     }
 
-    // Locates the captured flash region that fully contains [start, start+size)
-    // and runs CRC-16/CCITT-FALSE over the matching slice of its mirror buffer.
-    // The mirror is populated by Service36Handler when capture mode is on;
-    // partial overlaps are not enough because the kernel's CRC is defined over
-    // a contiguous range and a partial mirror would silently fabricate $FF
-    // bytes for the uncovered tail. Falls back to $0000 (which the tester
-    // treats as a non-match) when no region qualifies.
+    /// <summary>Resource cap on the read-validate CRC length. 32 MiB covers any
+    /// real ECU flash image (E38/E67/T43 are 1-2 MiB); a larger declared size is
+    /// treated as malformed and gets the $0000 non-match fallback rather than a
+    /// multi-GB allocation.</summary>
+    public const uint MaxCheckMemoryReadBytes = 32 * 1024 * 1024;
+
+    // Computes the CheckMemoryByAddress CRC-16/CCITT-FALSE. Two sources, in
+    // precedence order:
+    //
+    //   1. WRITE validate (a $36 download): the captured flash region that fully
+    //      contains [start, start+size), CRC'd over its $36-mirrored buffer. The
+    //      mirror is populated by Service36Handler when capture mode is on;
+    //      partial overlaps don't qualify (a partial mirror would fabricate $FF
+    //      bytes for the uncovered tail and the CRC is defined over a contiguous
+    //      range).
+    //
+    //   2. READ validate (PowerPCM's post-upload $31 $01 $04): while a $35/$36
+    //      upload is active, CRC the very bytes the read served - the flash image
+    //      from offset 0 for the declared length - so the CRC matches the buffer
+    //      the tester assembled and it prints "ok, valid". The read always starts
+    //      at flash 0 (Service35Handler resets the cursor), and the declared start
+    //      is a nominal OS base (e.g. 0x01000000) that doesn't map into the sim's
+    //      0-based image, so we deliberately CRC from 0. CopyFlash zero-fills past
+    //      the bin, exactly as the upload did, so a short/absent bin still matches.
+    //
+    // Falls back to $0000 (which the tester treats as a non-match) when neither
+    // source qualifies.
     private static ushort ComputeCheckMemoryCrc(EcuNode node, uint start, uint size,
                                                 ChannelSession ch)
     {
@@ -213,10 +232,21 @@ public static class Service31Handler
             }
         }
 
+        // Read validate: CRC the flash image the $35/$36 upload served.
+        if (node.State.UploadActive && size > 0 && size <= MaxCheckMemoryReadBytes)
+        {
+            var image = new byte[(int)size];
+            node.CopyFlash(0, image);
+            ushort crc = Crc16Ccitt.Compute(image);
+            ch.Bus?.LogSim?.Invoke(
+                $"[$31 check] CRC ${crc:X4} over read image 0x0 +{size} (upload validate)");
+            return crc;
+        }
+
         ch.Bus?.LogSim?.Invoke(
             $"[$31 check] CRC fallback to $0000: no captured flash region covers " +
-            $"0x{start:X8} +{size}. Enable 'Capture bootloader' so $31 $FF00 erase " +
-            "records the region and $36 mirrors writes into it.");
+            $"0x{start:X8} +{size}, and no upload is active. Enable 'Capture bootloader' " +
+            "so $31 $FF00 erase records the region and $36 mirrors writes into it.");
         return 0x0000;
     }
 }

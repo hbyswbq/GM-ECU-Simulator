@@ -34,11 +34,11 @@ public sealed class ChannelSession
     public Func<uint, byte[], bool>? IsoChannelInbound { get; set; }
 
     // J2534 v04.04 PassThruConnect flags. Bit definitions (subset):
-    //   0x0100  CAN_29BIT_ID            — channel uses 29-bit extended IDs
-    //   0x0200  ISO9141_NO_CHECKSUM     — n/a for CAN
-    //   0x0800  CAN_ID_BOTH             — accept both 11- and 29-bit IDs
+    //   0x0100  CAN_29BIT_ID            - channel uses 29-bit extended IDs
+    //   0x0200  ISO9141_NO_CHECKSUM     - n/a for CAN
+    //   0x0800  CAN_ID_BOTH             - accept both 11- and 29-bit IDs
     // Captured at PassThruConnect time. The bus does NOT yet consult these
-    // for routing — EcuNode CAN ID fields are 16-bit and TX flag forwarding
+    // for routing - EcuNode CAN ID fields are 16-bit and TX flag forwarding
     // is not wired. Storing the value lets a host-flag-aware future change
     // build on it without another wire-format bump.
     public uint ConnectFlags { get; init; }
@@ -66,7 +66,7 @@ public sealed class ChannelSession
 
     // Released once per EnqueueRx so a parked ReadMsgs caller wakes up at
     // most one extra time. Initial count 0; max int.MaxValue (queue grows
-    // freely under load — readers will drain whatever is queued).
+    // freely under load - readers will drain whatever is queued).
     public SemaphoreSlim RxAvailable { get; } = new(0, int.MaxValue);
 
     // J2534 SET_CONFIG / GET_CONFIG storage (per-channel parameter map).

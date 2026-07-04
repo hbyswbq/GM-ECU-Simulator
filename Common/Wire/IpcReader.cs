@@ -54,7 +54,7 @@ public ref struct IpcReader
     }
 
     // 24-byte header + DataSize bytes payload. The full 4128-byte buffer is
-    // never on the wire — only the prefix the simulator/shim has bound. We
+    // never on the wire - only the prefix the simulator/shim has bound. We
     // enforce PassThruMsg.MaxDataSize as a hard cap so a malformed
     // dataSize > Int32.MaxValue can't cast to a negative int.
     public PassThruMsg ReadPassThruMsg()

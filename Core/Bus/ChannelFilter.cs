@@ -2,7 +2,7 @@ using Common.PassThru;
 
 namespace Core.Bus;
 
-// J2534 message filter — the host registers up to N of these per channel
+// J2534 message filter - the host registers up to N of these per channel
 // to control which incoming frames are delivered. We honour Mask/Pattern on
 // the Rx-to-host path (frames the simulator pushes UP). We do not enforce
 // filters on the Tx-from-host path because the simulator already routes by

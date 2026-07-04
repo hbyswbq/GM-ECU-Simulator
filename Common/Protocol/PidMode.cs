@@ -14,6 +14,13 @@ namespace Common.Protocol;
 //           tester reads it with is derived deterministically as
 //           0xF000 | (Address & 0x0FFF) - see Pid.WireLookupId. The 0xF000
 //           range is GM's convention for dynamically-defined PIDs.
+//   Mode23: GMW3110 / UDS $23 ReadMemoryByAddress. Pid.Address holds the 32-bit
+//           memory address the row answers for; a $23 read whose address equals
+//           Address is served from the row's value source (StaticBytes / waveform
+//           / signal), truncated or zero-padded to the request's length. This row
+//           is NOT reachable through $22 (WireLookupId returns null) - it has its
+//           own service. Backed in Core/Bus/VirtualBus before stack dispatch, so
+//           it applies to every stack that carries $23 (GMW3110 and Ford UDS).
 //
 // OBD-II Mode $01 is NOT a Pid row: it is the built-in J1979 projection over the signal layer (see J1979Catalogue /
 // EcuNode.Mode1Supported / Service01Handler). The old free-form Mode1 PID row was removed in the signal-centric clean
@@ -23,4 +30,5 @@ public enum PidMode
     Mode22 = 0,
     Mode1A = 1,
     Mode2D = 2,
+    Mode23 = 3,
 }

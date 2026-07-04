@@ -169,16 +169,19 @@ public class ProgrammingSequenceTests
         //     branch performs a software reset with no $60 send.
         SendExpectingNoResponse(iso, new byte[] { 0x20 });
 
-        // 11. EcuExitLogic should have wiped the programming/download state.
-        //     SecurityUnlockedLevel is intentionally NOT reset - GMW3110
-        //     §8.5.6.2 Exit_Diagnostic_Services does not list security re-lock,
-        //     so unlock state survives until a power cycle.
+        // 11. EcuExitLogic should have wiped the programming/download state AND
+        //     re-locked SecurityAccess. GMW3110 §8.5.6.2 Exit_Diagnostic_Services
+        //     re-locks on $20 / P3C timeout: the programming_mode_active = NO branch
+        //     sets "Security_Access_Unlocked  FALSE", and the = YES branch (this
+        //     case, since $34/$36 left programming active) does a software reset
+        //     that re-locks via power-on. Either way the level returns to 0.
         Assert.False(node.State.NormalCommunicationDisabled);
         Assert.False(node.State.ProgrammingModeRequested);
         Assert.False(node.State.ProgrammingModeActive);
         Assert.False(node.State.DownloadActive);
         Assert.Null(node.State.DownloadBuffer);
         Assert.Equal(0u, node.State.DownloadBytesReceived);
+        Assert.Equal((byte)0, node.State.SecurityUnlockedLevel);   // re-locked on session exit
     }
 
     // -----------------------------------------------------------------------

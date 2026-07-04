@@ -9,7 +9,7 @@ namespace Core.Ecu;
 // 0x6A0 rapid-packet stream. The slot index is assigned dynamically per session;
 // the ADDRESS is the stable identifier the user knows the meaning of (e.g.
 // 0x003F7FA0 = engine RPM on the HAEE4UY strategy). This table lets the user
-// pre-wire each address to a SignalId so FordUdsPersona's broadcast loop drives
+// pre-wire each address to a SignalId so FordUdsDispatch's broadcast loop drives
 // that slot's DMR value from the matching engine signal.
 //
 // Only meaningful for ECUs running the Ford UDS persona (the only persona that

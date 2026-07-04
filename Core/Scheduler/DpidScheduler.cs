@@ -10,7 +10,7 @@ namespace Core.Scheduler;
 // Three-band periodic DPID scheduler. Each scheduled (node, dpid, channel)
 // triple owns its own TimerOnDelay configured with AutoRestart and a
 // Slow/Med/Fast period preset. All TimerOnDelay instances share the single
-// high-priority polling thread inside TimerScheduler — sub-millisecond
+// high-priority polling thread inside TimerScheduler - sub-millisecond
 // jitter regardless of how many DPIDs are active.
 //
 // Periods follow GMW3110 §8.20 default timing and the DataLogger convention
@@ -32,7 +32,7 @@ public sealed class DpidScheduler : IDisposable
     /// such as CaptureSettings without an extra parameter on every entry point.</summary>
     public VirtualBus Bus => bus;
 
-    // No-op now — kept so callers don't have to change. Each entry's timer
+    // No-op now - kept so callers don't have to change. Each entry's timer
     // starts itself when added; the global TimerScheduler thread is lazy.
     public void Start() { }
 

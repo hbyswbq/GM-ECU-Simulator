@@ -17,6 +17,29 @@ public sealed class PidModeSection : NotifyPropertyChangedBase
     public PidMode Mode { get; }
     public string Title { get; }
 
+    // The wire SID this section's mode maps to ($1A / $22 / $2D / $23). Used by EcuViewModel to test whether the section
+    // applies to the ECU's current persona (catalog membership): $1A and $2D are GMW3110-only, $22 and $23 are in both
+    // the GMW3110 and UDS/Ford catalogs (so the $23 section shows for GM and Ford alike).
+    public byte Sid => Mode switch
+    {
+        PidMode.Mode1A => 0x1A,
+        PidMode.Mode22 => 0x22,
+        PidMode.Mode2D => 0x2D,
+        PidMode.Mode23 => 0x23,
+        _              => 0x00,
+    };
+
+    // Whether this section is shown for the ECU's current persona. A GMW3110-only PID mode ($1A / $2D) is hidden when
+    // the Ford UDS persona is selected - that stack doesn't speak $1A/$2D, so the rows would neither dispatch nor back
+    // any service. Recomputed by EcuViewModel.RefreshSectionVisibility on construction and persona change. Rows are
+    // only hidden (the underlying Pids stay in the model), so toggling persona back restores them and Save keeps them.
+    private bool isVisible = true;
+    public bool IsVisible
+    {
+        get => isVisible;
+        set => SetField(ref isVisible, value);
+    }
+
     // $1A identity rows have fixed encoding (raw bytes), so the editor hides the analog-shaping columns (Type / Signal
     // / Scalar / Offset / Unit / Live) and shows Size read-only for this section. Bound by the shared section template
     // through the column BindingProxy. IsNotMode1A is the inverse for "show only when NOT $1A".
@@ -59,8 +82,10 @@ public sealed class PidModeSection : NotifyPropertyChangedBase
         View = new ListCollectionView(pids);
 
         // Same projections the old single grid used, minus Mode. Selector text feeds the column's substring filter;
-        // SortPath is the property the column orders by.
-        IdentifierColumnFilter = Make("Identifier", "Address", p => $"{p.IdentifierLabel} {p.AddressHex}");
+        // SortPath is the property the column orders by. The identifier column is headed "Address" for the $23
+        // ReadMemoryByAddress section - its rows key on a 32-bit memory address, not a wire PID id - and "PID" elsewhere.
+        IdentifierColumnFilter = Make(Mode == PidMode.Mode23 ? "Address" : "PID", "Address",
+                                      p => $"{p.IdentifierLabel} {p.AddressHex}");
         NameColumnFilter       = Make("Name", "Name", p => p.Name);
         SizeColumnFilter       = Make("Size (B)", "Model.ResponseLength", p => p.LengthBytesText);
         TypeColumnFilter       = Make("Type", "DataType", p => p.DataType.ToString());

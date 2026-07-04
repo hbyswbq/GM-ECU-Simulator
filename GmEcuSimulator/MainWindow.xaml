@@ -325,6 +325,25 @@
                      Theme entry and that's now its own top-level menu. -->
                 <MenuItem Header="_Theme" x:Name="ThemeMenu"
                           ToolTip="Switch the colour palette. Drop your own .xaml palette into %APPDATA%\GmEcuSimulator\Palettes\ to see it listed here."/>
+                <!-- About. The version line is stamped at build time from the
+                     git tag (see GmEcuSimulator.csproj StampVersionFromGit /
+                     AppInfo.cs), so it always matches the GitHub release the
+                     binary was built from. Clicking it opens the full About
+                     dialog; the releases item jumps to the GitHub page the
+                     version is keyed to. -->
+                <MenuItem Header="_About">
+                    <MenuItem Header="_Protocols…"
+                              Click="OnProtocolsClicked"
+                              ToolTip="Show every protocol and service this app supports, and which ones it answers"/>
+                    <Separator/>
+                    <MenuItem Header="{Binding AppVersionDisplay, FallbackValue=Version}"
+                              Click="OnAboutClicked"
+                              ToolTip="Show version and project details"/>
+                    <Separator/>
+                    <MenuItem Header="View _releases on GitHub…"
+                              Click="OnViewReleasesClicked"
+                              ToolTip="Open the GitHub releases page in your browser"/>
+                </MenuItem>
             </Menu>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,12,0">
                     <TextBlock Text="Mode"

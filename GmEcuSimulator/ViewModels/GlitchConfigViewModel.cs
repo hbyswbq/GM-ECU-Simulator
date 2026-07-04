@@ -7,7 +7,7 @@ namespace GmEcuSimulator.ViewModels;
 // (which the persistence layer round-trips) and these wrappers provide the
 // INotifyPropertyChanged plumbing the WPF DataGrid / CheckBox bindings need
 // for two-way edit. When the user toggles a checkbox or types a probability,
-// the new value lands on the Model object directly — no copy step.
+// the new value lands on the Model object directly - no copy step.
 //
 // Glitch dispatch logic in Core/Services is NOT yet implemented; these
 // settings are visible and persistable, but currently have no runtime effect.

@@ -12,7 +12,7 @@ namespace Core.Services;
 // All protocol / algorithm decisions live in the module (typically the
 // bundled Gmw3110_2010_Generic + an injected ISeedKeyAlgorithm).
 //
-// $27 activates P3C — same shape as Service10Handler. The dispatcher
+// $27 activates P3C - same shape as Service10Handler. The dispatcher
 // returns true when the module ran, regardless of positive/negative
 // response: even a failed $27 attempt counts as enhanced traffic that
 // should refresh the keepalive window.

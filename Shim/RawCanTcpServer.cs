@@ -182,6 +182,18 @@ public sealed class RawCanTcpServer : IAsyncDisposable
         using var connCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         isConnected = true;
 
+        // Wire the cross-channel UUDT broadcaster for this connection. Core-side
+        // stream emitters (the Ford DMR rapid-packet loop on 0x6A0, the DBC
+        // BroadcastScheduler) push frames through bus.Broadcaster; on the J2534
+        // path IpcSessionState fills that role, but the raw-CAN path has a single
+        // channel, so the broadcaster just funnels each frame onto its Rx queue,
+        // which DrainAsync pumps out to the gauge. Without this, broadcasts had
+        // nowhere to go - a raw-CAN gauge saw the diag handshake ($A1/$A0 acks)
+        // but never the rapid-packet stream. Cleared in the finally below so a
+        // reconnect rebinds against the live channel.
+        var broadcaster = new ChannelBroadcaster(ch);
+        bus.Broadcaster = broadcaster;
+
         try { bus.RaiseHostConnected(); }
         catch (Exception ex) { log($"[raw-can] HostConnected subscriber threw: {ex.Message}"); }
 
@@ -226,6 +238,11 @@ public sealed class RawCanTcpServer : IAsyncDisposable
                 // bin-replay stop, etc. Subscribers are idempotent.
                 try { bus.RaiseHostDisconnected(); }
                 catch (Exception ex) { log($"[raw-can] HostDisconnected subscriber threw: {ex.Message}"); }
+                // Unbind the broadcaster so a tick that races teardown (or the
+                // next connection) can't enqueue onto this closed channel. Done
+                // after RaiseHostDisconnected, which stops the DMR broadcast timer.
+                if (ReferenceEquals(bus.Broadcaster, broadcaster))
+                    bus.Broadcaster = null;
                 bus.OnStatusMessage?.Invoke($"raw-CAN TCP client disconnected ({remote})");
                 log("Raw-CAN client disconnected.");
             }
@@ -256,6 +273,28 @@ public sealed class RawCanTcpServer : IAsyncDisposable
         }
         catch (OperationCanceledException) { /* connection ending */ }
         catch (Exception ex) { log($"Raw-CAN drain error: {ex.Message}"); }
+    }
+
+    // IFrameBroadcaster for the single gauge channel: Core-side UUDT emitters
+    // (the Ford DMR rapid-packet loop, the DBC BroadcastScheduler) call
+    // BroadcastFrame, and we drop the frame onto the gauge channel's Rx queue,
+    // which DrainAsync writes out to the socket. Mirrors IpcSessionState's
+    // broadcaster minus the multi-channel fan-out (raw-CAN has exactly one
+    // channel). The channel's filter table still applies inside EnqueueRx; the
+    // gauge installs none, so every broadcast is delivered.
+    private sealed class ChannelBroadcaster : IFrameBroadcaster
+    {
+        private readonly ChannelSession ch;
+        public ChannelBroadcaster(ChannelSession ch) => this.ch = ch;
+        public void BroadcastFrame(byte[] frame)
+        {
+            ch.EnqueueRx(new PassThruMsg
+            {
+                ProtocolID = ProtocolID.CAN,
+                Data = frame,
+                IsBroadcast = true,   // unsolicited; lets the UI "Hide broadcasts" filter drop it
+            });
+        }
     }
 
     public async ValueTask DisposeAsync() => await StopAsync().ConfigureAwait(false);

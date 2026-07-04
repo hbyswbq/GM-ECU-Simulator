@@ -266,6 +266,26 @@ public static class UdsAnnotator
                 if (isPositive && usdt.Length >= 2)
                     return $"{head} {RenderBytesAsText(usdt.Slice(1))}";
                 return head;
+            case Service.FordSetupDmr:  // Ford SETUP_DMR (PCMTec datalog setup)
+                // Request: A1 <idx 0x01..0x14> <mode byte> <4B BE RAM addr> - binds
+                // a rapid-packet slot to a RAM address. Positive response is just
+                // E1 <idx>; surface the index so the bind/echo pair lines up.
+                // See FordUdsDispatch $A1 SETUP_DMR.
+                if (!isPositive && usdt.Length == 7)
+                {
+                    byte idx = usdt[1];
+                    byte mode = usdt[2];
+                    uint addr = ((uint)usdt[3] << 24) | ((uint)usdt[4] << 16)
+                              | ((uint)usdt[5] << 8) | usdt[6];
+                    return $"{head} slot={idx} mode=${mode:X2} addr=${addr:X8}";
+                }
+                if (isPositive && usdt.Length >= 2) return $"{head} slot={usdt[1]}";
+                return head;
+            case Service.FordReadDmr:  // Ford DMR read / start rapid-packet stream
+                // Request: A0 <slot>; kicks off (or refreshes) the 0x6A0 UUDT
+                // broadcast. Positive response echoes E0 <slot>. See FordUdsDispatch $A0.
+                if (usdt.Length >= 2) return $"{head} slot={usdt[1]}";
+                return head;
             case Service.FordReadBlock:  // Ford ReadBlock / flash-erase command (e.g. B1 00 B2 AA)
                 // Both the request and the $F1 positive response echo the same
                 // command bytes; tag them with the trailing payload so an erase
@@ -339,11 +359,13 @@ public static class UdsAnnotator
         // the dispatcher sends back. The Ford-PCM block below is exercised by
         // the ford-uds persona (PCMTec): Mode 09 vehicle-info, $23
         // ReadMemoryByAddress (Ford's 23 <4B addr> <2B len> form, no ALFI),
-        // and the $B1 ReadBlock/flash-erase command. See FordUdsPersona.
+        // and the $B1 ReadBlock/flash-erase command. See FordUdsDispatch.
         Service.EcuReset                          => "ECUReset (UDS)",
         Iso14229.Service.RoutineControl           => "RoutineControl (UDS)",
         Service.RequestVehicleInformation         => "VehicleInfo (Mode09)",
         Service.ReadMemoryByAddress               => "ReadMemoryByAddress",
+        Service.FordSetupDmr                       => "SetupDMR (Ford)",
+        Service.FordReadDmr                        => "ReadDMR (Ford)",
         Service.FordReadBlock                     => "ReadBlock (Ford)",
         _ => null,
     };

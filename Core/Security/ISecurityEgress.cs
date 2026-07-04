@@ -16,7 +16,7 @@ public interface ISecurityEgress
     void SendNegativeResponse(byte nrc);
 
     /// <summary>
-    /// Escape hatch — send an arbitrary USDT payload. The bytes are
+    /// Escape hatch - send an arbitrary USDT payload. The bytes are
     /// fragmented through ISO-TP and enqueued on the ECU's response
     /// CAN ID exactly as written. For non-standard protocol flows only;
     /// prefer SendPositiveResponse / SendNegativeResponse.

@@ -1,6 +1,7 @@
 using Common.PassThru;
 using Common.Protocol;
 using Core.Ecu;
+using Core.Protocol;
 using Core.Replay;
 using Core.Scheduler;
 using Core.Services;
@@ -34,7 +35,7 @@ public sealed class VirtualBus
 
     /// <summary>
     /// Free-running, monotonic microsecond clock shared by the WHOLE bus (all
-    /// channels, all ECUs/personas - one global time base, not per-persona).
+    /// channels, all ECUs/stacks - one global time base, not per-stack).
     /// Stamped onto every host-bound frame's <see cref="Common.PassThru.PassThruMsg.Timestamp"/>
     /// at the single delivery chokepoint (<see cref="ChannelSession.EnqueueRx"/>)
     /// so a J2534 host can plot a real time axis. TimeSpan.Ticks are 100 ns
@@ -116,7 +117,7 @@ public sealed class VirtualBus
 
     /// <summary>
     /// Cross-channel raw-frame broadcast hook. Set by the Shim's
-    /// IpcSessionState at construct time so any Core code (personas,
+    /// IpcSessionState at construct time so any Core code (stacks,
     /// schedulers) can push a UUDT frame at every open channel. Null
     /// while no IPC session is alive - callers must null-check.
     /// </summary>
@@ -242,8 +243,8 @@ public sealed class VirtualBus
     }
 
     // isBroadcast: set by the caller when this frame was delivered via the
-    // IFrameBroadcaster path (DBC scheduler OR a persona's UUDT stream, e.g.
-    // FordUdsPersona's $A0 DMR frames on 0x6A0). OR'd with the CAN-ID heuristic
+    // IFrameBroadcaster path (DBC scheduler OR a stack's UUDT stream, e.g.
+    // FordUdsDispatch's $A0 DMR frames on 0x6A0). OR'd with the CAN-ID heuristic
     // so a configured DBC id is still tagged even if it ever logs by another
     // route. Either makes the UI "Hide broadcasts" filter drop the line.
     internal void LogRx(uint chId, ReadOnlySpan<byte> frame, bool isBroadcast = false)
@@ -274,7 +275,7 @@ public sealed class VirtualBus
     /// True when <paramref name="canId"/> matches a DBC broadcast message
     /// configured on any ECU (<see cref="EcuNode.Broadcasts"/>). A secondary
     /// heuristic behind the authoritative delivery-path flag (see LogRx) - it
-    /// catches configured DBC ids; persona UUDT broadcasts (0x6A0, ...) are not
+    /// catches configured DBC ids; stack UUDT broadcasts (0x6A0, ...) are not
     /// in Broadcasts and rely on the flag. Diagnostic response IDs ($7E8/$5E8)
     /// never match.
     /// </summary>
@@ -439,7 +440,7 @@ public sealed class VirtualBus
         // future per-handler stack gates use this to NRC services that
         // aren't exposed on the caller's stack.
         var stack = DiagnosticStackClassifier.StackForCanId(canId);
-        DispatchUsdt(node, assembled, ch, isFunctional: false, stack);
+        DispatchUsdt(node, assembled, ch, isFunctional: false, canId, stack);
     }
 
     private void DispatchFunctional(ReadOnlySpan<byte> data, ChannelSession ch)
@@ -459,7 +460,7 @@ public sealed class VirtualBus
         EcuNode[] snapshot;
         lock (nodesLock) snapshot = nodes.ToArray();
         foreach (var node in snapshot)
-            DispatchUsdt(node, payload, ch, isFunctional: true, DiagnosticStack.Uds);
+            DispatchUsdt(node, payload, ch, isFunctional: true, GmlanCanId.AllNodesRequest, DiagnosticStack.Uds);
     }
 
     /// <summary>
@@ -484,10 +485,10 @@ public sealed class VirtualBus
         EcuNode[] snapshot;
         lock (nodesLock) snapshot = nodes.ToArray();
         foreach (var node in snapshot)
-            DispatchUsdt(node, payload, ch, isFunctional: true, DiagnosticStack.Uds);
+            DispatchUsdt(node, payload, ch, isFunctional: true, GmlanCanId.Obd2FunctionalRequest, DiagnosticStack.Uds);
     }
 
-    private void DispatchUsdt(EcuNode node, ReadOnlySpan<byte> usdt, ChannelSession ch, bool isFunctional, DiagnosticStack stack)
+    private void DispatchUsdt(EcuNode node, ReadOnlySpan<byte> usdt, ChannelSession ch, bool isFunctional, uint canId, DiagnosticStack stack)
     {
         if (usdt.Length < 1) return;
         byte sid = usdt[0];
@@ -508,31 +509,56 @@ public sealed class VirtualBus
         // catch can never raise a second-order exception.
         try
         {
+            // Wire the response pacing for this request onto the node's
+            // fragmenter BEFORE any handler enqueues a response. Every
+            // fragmenter-routed USDT response (positive, NRC, RAM-read-zeros, the
+            // dispatch-error fallback) then honours the node's ResponseDelayMs
+            // against the resolved stack's P2 / P2* (Core/Services/ResponseTiming).
+            // A disabled/exempt request clears the pacing so behaviour is
+            // byte-identical to the historic immediate send. Benign under
+            // concurrent dispatch because a node's pacing is constant. The $AA
+            // periodic UUDT stream, the DBC broadcasts, and inbound-FC emission
+            // all bypass the fragmenter, so none of them are paced.
+            ApplyResponsePacing(node, canId, isFunctional);
+
+            // User-defined Mode23 row: a $23 ReadMemoryByAddress whose address
+            // exactly matches a configured Mode23 PID row is answered from that
+            // row's value source (static bytes / waveform / signal). Highest
+            // precedence - an explicit row is the user saying "this address
+            // returns exactly this", so it wins over the loaded flash bin AND the
+            // RAM-read-zeros fallback. Runs before stack dispatch so it applies to
+            // every stack that carries $23 (GMW3110 and Ford UDS); a request that
+            // matches no row falls through to the bin / stack path unchanged.
+            if (sid == 0x23 && TryAnswerMemoryReadFromRows(node, usdt, ch, NowMs))
+                return;
+
             // RAM-read fallback (per-ECU opt-in): a $23 ReadMemoryByAddress
             // targeting an address beyond the loaded flash bin (RAM) gets a
             // positive zero-filled reply instead of NRC $31 RequestOutOfRange.
-            // Runs before persona dispatch so it applies to every persona;
-            // in-bin reads fall through to the persona's own handler.
+            // Runs before stack dispatch so it applies to every stack;
+            // in-bin reads fall through to the owning stack's own handler.
             if (sid == 0x23 && node.RamReadReturnsZeros
                 && TryAnswerRamReadWithZeros(node, usdt, ch))
             {
                 return;
             }
 
-            // Delegate to the ECU's currently-active persona. Default is
-            // Gmw3110Persona; a successful $36 sub $80 DownloadAndExecute
-            // swaps it to UdsKernelPersona. A persona returning false means
-            // "I don't recognise this SID" - before NRC'ing we fall through to
-            // CommonServices, the home for stack-neutral services ($22, ...)
-            // whose behaviour is identical across every persona so they aren't
-            // duplicated in (or omitted from) each persona's switch. Only if
-            // BOTH decline is a physical request NRC'd $11 ServiceNotSupported;
-            // functional broadcasts stay silent.
-            if (!node.Persona.Dispatch(node, usdt, ch, isFunctional, sid, NowMs, Scheduler, stack)
-                && !Core.Ecu.Personas.CommonServices.TryHandle(node, usdt, ch, isFunctional, sid, NowMs)
-                && !isFunctional)
+            // Every node dispatches through the protocol-stack model (the persona dispatch path
+            // and CommonServices are retired). Resolve (canId, sid) -> the binding that owns it;
+            // its stack handles the request (positive or a stack-correct NRC). A node mid-SPS-
+            // kernel-handover has its Stacks replaced by the kernel binding, so this same path
+            // serves it. There is no cross-stack fallback.
+            var binding = node.Resolve(canId, sid);
+            if (binding is not null
+                && binding.Stack.Dispatch(node, usdt, ch, isFunctional, NowMs, new StackContext(Scheduler, stack, binding)))
+                return;
+            // No binding owns the SID, or the owning stack declined (owned-but-unhandled, e.g. GM
+            // $12/$23). Physical -> the primary stack's serviceNotSupported NRC; functional
+            // broadcast stays silent.
+            if (!isFunctional)
             {
-                ServiceUtil.EnqueueNrc(node, ch, sid, Nrc.ServiceNotSupported);
+                byte nrc = node.PrimaryForCanId(canId)?.Stack.Nrc.ServiceNotSupported ?? Nrc.ServiceNotSupported;
+                ServiceUtil.EnqueueNrc(node, ch, sid, nrc);
             }
         }
         catch (Exception ex)
@@ -555,14 +581,65 @@ public sealed class VirtualBus
         }
     }
 
+    // Set (or clear) the node fragmenter's response pacing for the request about
+    // to be dispatched. Pace only solicited PHYSICAL responses from a baseline
+    // (non-kernel) ECU:
+    //   - delay <= 0 (the default): feature off - byte-identical immediate send.
+    //   - functional broadcast: a real ECU answers $7DF/$101 promptly, and a 78
+    //     RCR-RP to a broadcast many ECUs share is non-standard; keep it immediate
+    //     so e.g. the ForScan $22 0200 probe is unchanged.
+    //   - kernel mode: the transient SPS kernel must answer promptly (the flasher
+    //     polls $31 CheckMemory tightly); it does not honour the generic latency knob.
+    // Set just-in-time on the shared per-node fragmenter; under concurrent dispatch
+    // the only per-request variation is functional (null) vs physical (the same
+    // node-constant record), so a stomp at worst paces or skips one response
+    // differently - harmless, and the fragmenter still serialises the pace itself.
+    private void ApplyResponsePacing(EcuNode node, uint canId, bool isFunctional)
+    {
+        var frag = node.State.Fragmenter;
+        int delay = node.ResponseDelayMs;
+        if (delay <= 0 || isFunctional || node.InKernelMode) { frag.Pacing = null; return; }
+        frag.Pacing = new ResponsePacing
+        {
+            ProcessingMs = delay,
+            Timing = node.EffectiveTiming(canId),
+            Emit78 = node.Emit78WhenSlow,
+            Log = LogSim,
+        };
+    }
+
     // Answer a $23 ReadMemoryByAddress targeting RAM with a positive $63 reply
     // of <len> zero bytes. Returns true when handled, false when the request
     // isn't the recognised 7-byte ReadMemoryByAddress shape or the address
-    // range lies wholly inside the loaded flash bin (in which case the persona
-    // serves the real bytes). Request layout (the Ford UDS $23 wire format):
+    // range lies wholly inside the loaded flash bin (in which case the Ford
+    // dispatch serves the real bytes). Request layout (the Ford UDS $23 wire format):
     //   23 <4-byte BE address> <2-byte BE length>   (7 bytes total)
     // "RAM" = any byte of the requested range lies at or past the bin length;
     // with no bin loaded the bin length is 0, so every address is RAM.
+    // Serve a $23 ReadMemoryByAddress from a user-defined Mode23 PID row (any
+    // stack). The request is `23 <4B BE addr> <2B BE len>` (7 bytes); a row whose
+    // Address equals addr answers it, with the row's value written into a
+    // len-sized payload via Pid.WriteResponseBytes (truncated or zero-padded to
+    // len, exactly like the $22 / $2D paths). Returns false - falling through to
+    // the bin / RAM-zeros / stack path - when the request isn't the expected
+    // shape, len is zero, or no row claims the address.
+    private static bool TryAnswerMemoryReadFromRows(EcuNode node, ReadOnlySpan<byte> usdt, ChannelSession ch, double nowMs)
+    {
+        if (usdt.Length != 7) return false;
+        uint addr = (uint)((usdt[1] << 24) | (usdt[2] << 16) | (usdt[3] << 8) | usdt[4]);
+        ushort len = (ushort)((usdt[5] << 8) | usdt[6]);
+        if (len == 0) return false;
+
+        var pid = node.GetMemoryReadPid(addr);
+        if (pid is null) return false;
+
+        var reply = new byte[1 + len];
+        reply[0] = 0x63;                          // 0x23 | 0x40 positive response
+        pid.WriteResponseBytes(nowMs, reply.AsSpan(1));   // fills len bytes (truncate / zero-pad)
+        node.State.Fragmenter.EnqueueResponse(ch, node.UsdtResponseCanId, reply);
+        return true;
+    }
+
     private static bool TryAnswerRamReadWithZeros(EcuNode node, ReadOnlySpan<byte> usdt, ChannelSession ch)
     {
         if (usdt.Length != 7) return false;
@@ -570,8 +647,8 @@ public sealed class VirtualBus
         ushort len = (ushort)((usdt[5] << 8) | usdt[6]);
         if (len == 0) return false;
 
-        uint binLength = (uint)Core.Ecu.Personas.FordUdsPersona.FlashBinSize;
-        // Wholly inside the bin -> not RAM; let the persona serve real bytes.
+        uint binLength = (uint)Core.Protocol.FordUdsDispatch.FlashBinSize;
+        // Wholly inside the bin -> not RAM; let the Ford dispatch serve real bytes.
         // ulong guards against addr+len wrapping for addresses near uint.MaxValue.
         if ((ulong)addr + len <= binLength) return false;
 

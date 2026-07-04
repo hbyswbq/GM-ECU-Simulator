@@ -16,10 +16,10 @@ namespace Core.Ecu;
 //  - LastEnhancedChannel: Volatile.Read/Write + CAS via Interlocked.
 //  - TesterPresent / Reassembler: each carries its own internal locking.
 //  - DynamicallyDefinedPids and the new $27 security fields: guarded by
-//    the Sync lock below — they have no per-field synchronisation.
+//    the Sync lock below - they have no per-field synchronisation.
 //
 // Initial state on construction matches "Normal Communication Mode" /
-// default diagnostic session per GMW3110-2010 — identical to the state
+// default diagnostic session per GMW3110-2010 - identical to the state
 // after $20 ReturnToNormalMode (with the exception that on power-on the
 // security lockout/attempt counters reset; $20 typically leaves them
 // alone). Sections to verify in your copy of the spec: §6.2 (P3C on
@@ -65,7 +65,7 @@ public sealed class NodeState
     //
     // All security fields default to the post-power-on state (locked at
     // every level, no pending seed, no failed attempts, no lockout).
-    // Sync protects these — they have no per-field synchronisation.
+    // Sync protects these - they have no per-field synchronisation.
 
     public readonly Lock Sync = new();
 
@@ -94,6 +94,29 @@ public sealed class NodeState
 
     /// <summary>True if the security-access lockout deadline has not yet elapsed.</summary>
     public bool IsInLockout(long nowMs) => SecurityLockoutUntilMs > nowMs;
+
+    /// <summary>
+    /// Re-locks SecurityAccess and clears every transient $27 field (unlocked
+    /// level, pending seed, failed-attempt counter, lockout deadline, and the
+    /// module-private bookkeeping slot). GMW3110 §8.5.6.2 Exit_Diagnostic_Services()
+    /// re-locks on $20 / P3C timeout: the programming_mode_active = NO branch sets
+    /// "Security_Access_Unlocked  FALSE" and the = YES branch does a software reset
+    /// that re-locks via power-on. Called by EcuExitLogic.Run (the spec teardown)
+    /// and by EcuViewModel.ResetSecurityState (the "Reset state" button) so the two
+    /// paths share one re-lock implementation and cannot drift.
+    /// </summary>
+    public void ResetSecurity()
+    {
+        lock (Sync)
+        {
+            SecurityUnlockedLevel = 0;
+            SecurityPendingSeedLevel = 0;
+            SecurityLastIssuedSeed = null;
+            SecurityFailedAttempts = 0;
+            SecurityLockoutUntilMs = 0;
+            SecurityModuleState = null;
+        }
+    }
 
     // ----- $28 DisableNormalCommunication / $A5 ProgrammingMode / $34/$36 download state -----
     //
@@ -231,12 +254,43 @@ public sealed class NodeState
     /// </summary>
     public List<FlashEraseRegion> CapturedFlashRegions { get; } = new();
 
+    // ----- $35 RequestUpload / flash-READ state -----
+    //
+    // The read counterpart of the $34/$36 download state above, used by the
+    // $35/$36 flash-read emulation (ReadEmulation + Service35Handler). Two
+    // distinct reader dialects share these fields:
+    //
+    //   E38E67 (PowerPCM native upload): $35 RequestUpload sets UploadActive and
+    //     zeroes UploadCursor; each subsequent $36 serves the next block from
+    //     UploadCursor and advances it (the request carries no address, so the
+    //     ECU auto-advances). UploadActive routes $36 to the read path instead
+    //     of the $34 download-write path.
+    //
+    //   T43 (6Speed read-kernel): T43ReadKernelActive is set when the read
+    //     kernel is DownloadAndExecute'd; each $35 emits one self-contained
+    //     multi-frame block starting at UploadCursor and advances it (the tool
+    //     always sends address 0, so the ECU tracks position here).
+    //
+    // All cleared by ClearProgrammingState ($20 / P3C timeout).
+
+    /// <summary>True while a $35 RequestUpload (native E38/E67 read) is in progress: routes $36 to the read path.</summary>
+    public bool UploadActive { get; set; }
+
+    /// <summary>True once the 6Speed.T43 read-kernel has been DownloadAndExecute'd: routes $35 to the multi-frame block read.</summary>
+    public bool T43ReadKernelActive { get; set; }
+
+    /// <summary>Running read offset (absolute flash byte) for the current upload/read session. Advances as blocks are served.</summary>
+    public long UploadCursor { get; set; }
+
     /// <summary>
     /// Wipes all programming + download flags. Called from EcuExitLogic so $20
     /// and P3C timeout return the ECU to Normal Communication Mode.
     /// </summary>
     public void ClearProgrammingState()
     {
+        UploadActive = false;
+        T43ReadKernelActive = false;
+        UploadCursor = 0;
         NormalCommunicationDisabled = false;
         ProgrammingModeRequested = false;
         ProgrammingModeActive = false;

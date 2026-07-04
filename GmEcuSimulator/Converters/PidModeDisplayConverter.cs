@@ -19,6 +19,7 @@ public sealed class PidModeDisplayConverter : IValueConverter
                 PidMode.Mode1A => "Mode 1A",
                 PidMode.Mode22 => "Mode 22",
                 PidMode.Mode2D => "Mode 2D",
+                PidMode.Mode23 => "Mode 23",
                 _              => mode.ToString(),
             }
             : string.Empty;

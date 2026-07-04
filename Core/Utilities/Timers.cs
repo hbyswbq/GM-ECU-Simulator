@@ -1,6 +1,6 @@
 // Ported verbatim from `Gm Data Logger_v5_Wpf_WIP/Core/Utilities/Timers.cs`.
 // Single shared high-priority polling thread with a min-heap of pending
-// deadlines — millisecond accuracy regardless of how many timers are
+// deadlines - millisecond accuracy regardless of how many timers are
 // active. Used here by DpidScheduler and TesterPresentTicker so we don't
 // need our own per-band threads.
 using System.Diagnostics;
@@ -279,7 +279,7 @@ internal sealed class TimerScheduler
     {
         _stopwatch.Start();
         // Tell the spin loop to exit when the host process is shutting down
-        // — without this, the high-priority polling thread can prevent xUnit's
+        // - without this, the high-priority polling thread can prevent xUnit's
         // testhost from ending cleanly and the run is reported as aborted.
         AppDomain.CurrentDomain.ProcessExit += (_, _) => RequestShutdown();
         AppDomain.CurrentDomain.DomainUnload += (_, _) => RequestShutdown();
@@ -390,7 +390,7 @@ public static class TimerSchedulerTestHooks
     public static void Shutdown()
     {
         // Setting _shuttingDown via the singleton's internal RequestShutdown
-        // method — accessed through reflection since TimerScheduler is internal.
+        // method - accessed through reflection since TimerScheduler is internal.
         var scheduler = TimerScheduler.Instance;
         var method = typeof(TimerScheduler).GetMethod(
             "RequestShutdown",

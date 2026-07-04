@@ -48,8 +48,15 @@ if (-not $SkipBuild) {
     # Clean the publish dir so stale files from a prior layout never leak in.
     if (Test-Path $publish) { Remove-Item $publish -Recurse -Force }
 
-    Write-Host "Publishing WPF app (Release, framework-dependent)..."
-    & dotnet publish $appProj -c Release | Out-Host
+    # Stamp the published bundle with exactly this release's version so the
+    # in-app About box reports the GitHub release it shipped as. The csproj
+    # otherwise derives the version from `git describe`; passing it explicitly
+    # is authoritative even when the publish runs before the tag is pushed.
+    # Strip the leading 'v' for the numeric assembly Version.
+    $verNum = $Version.TrimStart('v')
+
+    Write-Host "Publishing WPF app (Release, framework-dependent) as $verNum..."
+    & dotnet publish $appProj -c Release "/p:Version=$verNum" | Out-Host
     if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed (exit $LASTEXITCODE)" }
 }
 

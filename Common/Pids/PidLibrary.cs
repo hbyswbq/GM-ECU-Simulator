@@ -13,13 +13,14 @@ namespace Common.Pids;
 /// </summary>
 /// <remarks>
 /// Storage form per mode: gzip(CSV-UTF8) -> AES-128-CBC (PKCS7), embedded
-/// as <c>Core/Pids/Mode{01,1A,22}Library.bin</c>. The key + IV live in this
+/// as <c>Common/Pids/Mode{01,1A,22}Library.bin</c> (plus the Ford set
+/// <c>Mode22LibraryFord.bin</c>). The key + IV live in this
 /// file so anyone with the shipped binary can recover the CSVs - this is
 /// obfuscation, not real security. The point is to keep the source CSVs
 /// out of repo and out of casual <c>strings</c> inspection. Regenerate the
 /// blobs with <c>tools/pid_library_packer/pack_pid_libraries.py</c>; that
 /// script's <c>AES_KEY</c> / <c>AES_IV</c> constants must stay in sync with
-/// the values below. Loading is lazy: the first access to any of the three
+/// the values below. Loading is lazy: the first access to any of the four
 /// dictionaries triggers a decrypt + decompress + parse pass for that mode
 /// only.
 /// </remarks>

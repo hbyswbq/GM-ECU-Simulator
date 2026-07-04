@@ -53,13 +53,71 @@ public sealed class IsoTpFragmenter : IDisposable
     public bool InProgress { get { lock (sync) return activeTx != null; } }
 
     /// <summary>
-    /// Begin sending a USDT response. For a payload that fits in a SingleFrame
-    /// (≤ 7 bytes with normal addressing), the SF is emitted immediately and
-    /// the call returns - no FC handshake required. For larger payloads, the
-    /// FF is emitted and the cascade is then driven by inbound FC frames
-    /// (delivered via <see cref="OnFlowControl"/>) and the STmin timer.
+    /// Optional response pacing. When set (by <see cref="Core.Bus.VirtualBus"/> from
+    /// the node's ResponseDelayMs and the resolved stack's TimingProfile),
+    /// <see cref="EnqueueResponse"/> defers the response by the modelled processing
+    /// time and emits 7F sid 78 RCR-RP heartbeats per P2 / P2* instead of sending
+    /// immediately. Null = send now (the default; byte-identical to the pre-timing
+    /// path). The bus sets it just-in-time per request; benign under concurrent
+    /// dispatch because a given node's pacing is constant.
+    /// </summary>
+    public Core.Services.ResponsePacing? Pacing { get; set; }
+
+    // Active pace generation + its target channel. A pending pace chain is gated
+    // on paceGen via the isLive delegate handed to ResponseTiming; bumping paceGen
+    // (a newer pace superseding this one, or AbortIfActiveOn on the target channel)
+    // abandons the chain so a deferred frame never lands on a torn-down channel -
+    // the pace-time analogue of the AbortIfActiveOn guard on an in-flight TX.
+    private volatile int paceGen;
+    private ChannelSession? paceChannel;
+
+    /// <summary>
+    /// Begin sending a USDT response, applying <see cref="Pacing"/> when set so the
+    /// active stack's P2 / P2* timing is honoured. With no pacing this is exactly
+    /// <see cref="SendNow"/>.
     /// </summary>
     public void EnqueueResponse(ChannelSession ch, uint canId, ReadOnlySpan<byte> usdtPayload)
+    {
+        if (usdtPayload.Length == 0)
+            throw new ArgumentException("Cannot send empty USDT payload (no SF_DL=0 in §9.6.2.1)");
+
+        var pacing = Pacing;
+        if (pacing is null || pacing.ProcessingMs <= 0) { SendNow(ch, canId, usdtPayload); return; }
+        StartPace(pacing, ch, canId, usdtPayload.ToArray());
+    }
+
+    // Arm a cancellable pace chain owned by this fragmenter. A new pace bumps
+    // paceGen, abandoning any prior pending chain (last response wins - the
+    // fragmenter sends one TX at a time), and records the target channel so
+    // AbortIfActiveOn can cancel it on teardown. ResponseTiming.Pace returns once
+    // the first timer is armed, so the sync hold here is brief.
+    private void StartPace(Core.Services.ResponsePacing pacing, ChannelSession ch, uint canId, byte[] payload)
+    {
+        int gen;
+        lock (sync) { gen = ++paceGen; paceChannel = ch; }
+        Core.Services.ResponseTiming.Pace(pacing, ch, canId, payload,
+            (c, id, p) => SendNow(c, id, p),
+            isLive: () => paceGen == gen);
+    }
+
+    // Cancel any pending pace chain (caller holds sync). The next gated step sees
+    // the bumped generation and stops without sending.
+    private void CancelPaceLocked()
+    {
+        paceGen++;
+        paceChannel = null;
+    }
+
+    /// <summary>
+    /// Send a USDT response immediately, bypassing any <see cref="Pacing"/>.
+    /// For a payload that fits in a SingleFrame (≤ 7 bytes with normal
+    /// addressing), the SF is emitted immediately and the call returns - no FC
+    /// handshake required. For larger payloads, the FF is emitted and the cascade
+    /// is then driven by inbound FC frames (delivered via <see cref="OnFlowControl"/>)
+    /// and the STmin timer. FlashTiming and the response pacer call this so their
+    /// own deferral is the only one applied (no double-pacing).
+    /// </summary>
+    public void SendNow(ChannelSession ch, uint canId, ReadOnlySpan<byte> usdtPayload)
     {
         if (usdtPayload.Length == 0)
             throw new ArgumentException("Cannot send empty USDT payload (no SF_DL=0 in §9.6.2.1)");
@@ -107,6 +165,12 @@ public sealed class IsoTpFragmenter : IDisposable
     {
         lock (sync)
         {
+            // Abandon a pending pace chain targeting this channel BEFORE the
+            // activeChannel check: a deferred response has not started any ISO-TP
+            // send yet (activeChannel is null/unrelated), so without this its timer
+            // would still fire SendNow onto the torn-down channel after teardown.
+            if (paceChannel == ch) CancelPaceLocked();
+
             if (activeChannel != ch) return;
             // Latch as "general error" - the spec doesn't have a specific
             // N_Result for "channel went away mid-TX"; this is the closest fit
@@ -322,6 +386,6 @@ public sealed class IsoTpFragmenter : IDisposable
 
     public void Dispose()
     {
-        lock (sync) ClearActiveLocked();
+        lock (sync) { CancelPaceLocked(); ClearActiveLocked(); }
     }
 }

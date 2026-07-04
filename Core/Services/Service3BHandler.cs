@@ -110,14 +110,14 @@ public static class Service3BHandler
 
     /// <summary>
     /// Handles a $3B WriteDataByIdentifier request. Returns true on positive
-    /// response so the persona's dispatch can refresh P3C (a successful $3B is
+    /// response so the dispatch table can refresh P3C (a successful $3B is
     /// enhanced traffic - it gates the SPS Appendix D Part 2 flow).
     /// </summary>
     public static bool Handle(EcuNode node, ReadOnlySpan<byte> usdtPayload, ChannelSession ch)
     {
-        // Sanity guard: the persona dispatches on byte[0] so this should always
-        // hold, but assert it so an accidental rewire surfaces as NRC $12 on
-        // the wire rather than a malformed positive response.
+        // Sanity guard: the dispatch table routes on byte[0] so this should
+        // always hold, but assert it so an accidental rewire surfaces as NRC $12
+        // on the wire rather than a malformed positive response.
         if (usdtPayload.Length < 1 || usdtPayload[0] != Service.WriteDataByIdentifier)
         {
             ServiceUtil.EnqueueNrc(node, ch, Service.WriteDataByIdentifier, Nrc.SubFunctionNotSupportedInvalidFormat);

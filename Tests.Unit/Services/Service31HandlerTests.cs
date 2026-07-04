@@ -10,8 +10,8 @@ namespace EcuSimulator.Tests.Services;
 // ISO 14229-1 §11.7 RoutineControl coverage. Not a GMW3110 service; see
 // Core/Services/Uds/Service31Handler.cs header for why the simulator
 // implements it (SPS kernel compatibility for powerpcm_flasher and similar
-// tools). The handler lives under UdsKernelPersona at the dispatcher level;
-// these tests call the handler directly, so persona state is not exercised.
+// tools). The handler lives under UdsKernelDispatch at the dispatcher level;
+// these tests call the handler directly, so kernel-stack state is not exercised.
 public sealed class Service31HandlerTests
 {
     private const byte Sid = 0x31;

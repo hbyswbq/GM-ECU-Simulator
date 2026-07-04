@@ -1,33 +1,32 @@
 using Common.Protocol;
 using Core.Bus;
+using Core.Ecu;
 using Core.Scheduler;
 using Core.Services;
 using Core.Services.Uds;
 
-namespace Core.Ecu.Personas;
+namespace Core.Protocol;
 
-// UDS persona presented by a GM SPS programming kernel that has just been
-// boot-loaded via $36 sub $80 DownloadAndExecute. Activated by
-// Service36Handler when the DownloadAndExecute lands; reset to Gmw3110Persona
-// by EcuExitLogic on $20 or P3C timeout.
+// The SPS-kernel dispatch: the UDS-flavoured service table a GM SPS programming
+// kernel presents once it has been boot-loaded via $36 sub $80 DownloadAndExecute.
+// Reached as the UDS-Kernel stack's dispatch implementation; the kernel binding is
+// pushed by Service36Handler (EnterKernelMode) when the DownloadAndExecute lands and
+// torn down by EcuExitLogic (ExitKernelMode) on $20 or P3C timeout.
 //
 // Scope is deliberately narrow - real kernels only answer a handful of
 // services. Anything not listed here falls through to NRC $11
-// ServiceNotSupported via the persona's default-false return, which matches
+// ServiceNotSupported via the dispatch's default-false return, which matches
 // what powerpcm_flasher and similar tools see on real hardware.
-public sealed class UdsKernelPersona : IDiagnosticPersona
+public sealed class UdsKernelDispatch
 {
-    public static readonly UdsKernelPersona Instance = new();
-    private UdsKernelPersona() { }
-
-    public string Id => "uds-kernel";
-    public string DisplayName => "UDS (SPS kernel)";
+    public static readonly UdsKernelDispatch Instance = new();
+    private UdsKernelDispatch() { }
 
     public bool Dispatch(EcuNode node, ReadOnlySpan<byte> usdt, ChannelSession ch,
                         bool isFunctional, byte sid, double nowMs, DpidScheduler scheduler,
                         DiagnosticStack stack)
     {
-        _ = stack;  // kernel persona only runs after $36 sub $80; stack is
+        _ = stack;  // kernel dispatch only runs after $36 sub $80; stack is
                     // whatever CAN ID the host used to hand control over.
 
         switch (sid)
@@ -35,7 +34,7 @@ public sealed class UdsKernelPersona : IDiagnosticPersona
             case Iso14229.Service.RoutineControl:
                 if (isFunctional) return true;
                 if (Service31Handler.Handle(node, usdt, ch))
-                    Persona.ActivateP3C(node, ch);
+                    DispatchShared.ActivateP3C(node, ch);
                 return true;
             case Service.TesterPresent:
                 // ISO 14229 $3E is byte-identical to GMW3110 $3E. The kernel
@@ -44,24 +43,34 @@ public sealed class UdsKernelPersona : IDiagnosticPersona
                 return true;
             case Service.ReturnToNormalMode:
                 // $20 is the documented way for the tester to ask the kernel
-                // to hand control back to the boot ROM. EcuExitLogic resets
-                // the persona to GMW3110 as part of its cleanup.
+                // to hand control back to the boot ROM. EcuExitLogic restores
+                // the baseline stacks (ExitKernelMode) as part of its cleanup.
                 if (isFunctional) { EcuExitLogic.Run(node, scheduler, null); return true; }
                 Service20Handler.Handle(node, usdt, ch, scheduler);
                 return true;
             case Service.RequestDownload:
                 // Some kernels accept a second $34/$36 pair to layer in
                 // calibration after the OS upload. Forward to the same
-                // handler the GMW3110 persona uses - the wire shape is
+                // handler the GMW3110 dispatch uses - the wire shape is
                 // compatible for the cases SPS kernels send.
                 if (isFunctional) return true;
                 if (Service34Handler.Handle(node, usdt, ch))
-                    Persona.ActivateP3C(node, ch);
+                    DispatchShared.ActivateP3C(node, ch);
+                return true;
+            case Service.RequestUpload:
+                // $35 flash-READ. Both reader tools issue $35 from within kernel
+                // mode (they DownloadAndExecute a helper kernel first): the T43
+                // read-kernel answers each $35 with a multi-frame block, while the
+                // E38/E67 native path arms an upload that the following $36s drain.
+                // Service35Handler branches on ReadFamily / T43ReadKernelActive.
+                if (isFunctional) return true;
+                if (Service35Handler.Handle(node, usdt, ch))
+                    DispatchShared.ActivateP3C(node, ch);
                 return true;
             case Service.TransferData:
                 if (isFunctional) return true;
                 if (Service36Handler.Handle(node, usdt, ch))
-                    Persona.ActivateP3C(node, ch);
+                    DispatchShared.ActivateP3C(node, ch);
                 return true;
             default:
                 return false;

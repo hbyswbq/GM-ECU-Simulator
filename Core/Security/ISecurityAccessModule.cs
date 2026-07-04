@@ -6,7 +6,7 @@ namespace Core.Security;
 // one full $27 exchange step (one requestSeed OR one sendKey) per call to
 // Handle. The module receives a SecurityAccessContext that exposes the
 // decoded USDT payload, mutable NodeState, the current bus time, and an
-// ISecurityEgress for putting frames back on the bus — modules never need
+// ISecurityEgress for putting frames back on the bus - modules never need
 // to import the ISO-TP transport layer directly.
 //
 // Most consumers do NOT implement this directly: instead they write a small
@@ -30,7 +30,7 @@ public interface ISecurityAccessModule
     /// <summary>
     /// Process one $27 USDT request. The implementation must enqueue exactly
     /// one response (positive, negative, or raw) via ctx.Egress before
-    /// returning, unless it intentionally stays silent (rare — typically only
+    /// returning, unless it intentionally stays silent (rare - typically only
     /// for functional broadcasts, which the dispatcher already filters).
     /// </summary>
     void Handle(SecurityAccessContext ctx);

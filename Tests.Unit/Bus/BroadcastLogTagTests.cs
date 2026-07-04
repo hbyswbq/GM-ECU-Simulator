@@ -44,7 +44,7 @@ public class BroadcastLogTagTests
     [Fact]
     public void DeliveryPathFlag_TagsPersonaUudt_NotInBroadcasts()
     {
-        // FordUdsPersona's $A0 DMR stream emits on 0x6A0 - NOT in any ECU's
+        // FordUdsDispatch's $A0 DMR stream emits on 0x6A0 - NOT in any ECU's
         // Broadcasts list, so the CAN-id heuristic alone misses it. The
         // delivery-path flag (set by IpcSessionState.BroadcastFrame) is what
         // tags it, so "Hide broadcasts" catches persona UUDT too.

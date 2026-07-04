@@ -1,7 +1,7 @@
 using Common.Protocol;
 using Core.Bus;
 using Core.Ecu;
-using Core.Ecu.Personas;
+using Core.Protocol;
 
 namespace Core.Services;
 
@@ -44,6 +44,18 @@ public static class Service36Handler
     /// <summary>Returns true if a positive response was sent, false if an NRC was sent.</summary>
     public static bool Handle(EcuNode node, ReadOnlySpan<byte> usdtPayload, ChannelSession ch)
     {
+        // Flash-READ path (E38/E67 native upload): once a $35 RequestUpload has
+        // armed UploadActive, every $36 is a "give me the next block" request
+        // (PowerPCM sends a bare "36 00 00 00 00 00" and lets the ECU auto-advance
+        // its read cursor). Serve the block from flash before any of the $34
+        // download-write bookkeeping below - the two modes are mutually exclusive.
+        if (usdtPayload.Length >= 1 && usdtPayload[0] == Service.TransferData
+            && node.State.UploadActive)
+        {
+            ReadEmulation.SendUploadBlock(node, ch);
+            return true;
+        }
+
         int addrBytes = node.State.DownloadAddressByteCount;
         // Minimum length: 1 SID + 1 sub + addrBytes + 1 data byte (sub $00 requires data).
         // For sub $80, data may be empty.
@@ -154,23 +166,37 @@ public static class Service36Handler
         }
 
         // Sub $80 DownloadAndExecute hands the bus to the just-uploaded SPS
-        // kernel. Swap the ECU's persona so subsequent $31/etc. requests are
-        // dispatched by UdsKernelPersona; EcuExitLogic resets it on $20 / P3C
-        // timeout. Done before the positive response so wire ordering matches
-        // a real kernel handover.
+        // kernel. Replace the ECU's stacks with the transient kernel binding so
+        // subsequent $31/etc. requests dispatch through the UDS-kernel stack;
+        // EcuExitLogic restores the baseline on $20 / P3C timeout. Done before the
+        // positive response so wire ordering matches a real kernel handover.
         if (sub == 0x80)
         {
             // Explicit kernel-handover boundary: whatever the host just
             // finished pushing IS the kernel by definition. Sniff & dump a
             // tagged copy alongside the per-$36 fragments before the
-            // persona swap.
+            // kernel binding takes over.
             if (ch.Bus is not null)
                 BootloaderCaptureWriter.WriteCompletedBracketIfKernel(node, ch.Bus, "exec");
-            node.Persona = UdsKernelPersona.Instance;
+            node.EnterKernelMode(ProtocolStacks.KernelBindingFor(node));
+
+            // 6Speed.T43 read-kernel handover: when a T43-family ECU has just been
+            // handed the read-kernel (exec @ 0x003FC430), control passes to that
+            // kernel, whose first CAN TX is a single-frame $99 "alive" - NOT the
+            // generic $76. Arm T43ReadKernelActive so the following $35s serve
+            // multi-frame blocks, reset the read cursor, and send $99 instead.
+            if (node.ReadFamily == ReadKernelFamily.T43
+                && startingAddress == ReadEmulation.T43ReadKernelEntryAddress)
+            {
+                node.State.T43ReadKernelActive = true;
+                node.State.UploadCursor = 0;
+                ReadEmulation.SendT43KernelAlive(node, ch);
+                return true;
+            }
         }
 
         // $76, delayed by the ECU's FlashTransferDelayMs (0 = immediate). Lets
-        // any persona model real per-block program time; default 0 keeps the
+        // any ECU model real per-block program time; default 0 keeps the
         // synchronous behaviour every existing flow/test relies on.
         FlashTiming.EnqueueTransferResponse(node, ch, [Service.Positive(Service.TransferData)]);
         return true;

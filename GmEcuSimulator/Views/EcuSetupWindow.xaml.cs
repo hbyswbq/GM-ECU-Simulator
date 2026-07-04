@@ -39,6 +39,18 @@ public partial class EcuSetupWindow : Window
         }
     }
 
+    // Double-clicking a PID column header toggles its sort between ascending and descending (single clicks are left to
+    // the grid so they don't fight cell selection). The header's DataContext is the column's PidColumnFilter, same as
+    // the right-click path above.
+    private void OnColumnHeaderLeftClick(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ClickCount == 2 && sender is FrameworkElement { DataContext: PidColumnFilter filter })
+        {
+            filter.ToggleSortCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
     private void UpdateMaximizeIcon()
     {
         if (MaxIcon == null) return;

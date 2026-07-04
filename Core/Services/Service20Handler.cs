@@ -6,7 +6,7 @@ using Core.Scheduler;
 namespace Core.Services;
 
 // $20 ReturnToNormalMode. Per GMW3110 §8.5.6.2:
-//   - Calls Exit_Diagnostic_Services() — clears all enhanced state.
+//   - Calls Exit_Diagnostic_Services() - clears all enhanced state.
 //   - Length != 1 -> $7F $20 $12.
 //   - Otherwise: $60 positive response.
 public static class Service20Handler

@@ -1,5 +1,5 @@
 using Core.Bus;
-using Core.Ecu.Personas;
+using Core.Protocol;
 using Core.Services;
 using EcuSimulator.Tests.TestHelpers;
 using Xunit;
@@ -16,19 +16,21 @@ namespace EcuSimulator.Tests.Services;
 public sealed class EcuExitLogicPersonaTests
 {
     [Fact]
-    public void Run_RevertsRuntimeUdsKernelHandover_ToGmw3110()
+    public void Run_RevertsRuntimeUdsKernelHandover_ToBaselineStacks()
     {
         var bus = new VirtualBus();
         var node = NodeFactory.CreateNode();
         bus.AddNode(node);
 
-        // $36 sub $80 DownloadAndExecute swaps in the kernel persona at runtime;
+        // $36 sub $80 DownloadAndExecute replaces the stacks with the kernel binding at runtime;
         // $20 / P3C timeout is the documented hand-back point.
-        node.Persona = UdsKernelPersona.Instance;
+        node.EnterKernelMode(Core.Protocol.ProtocolStacks.KernelBindingFor(node));
+        Assert.True(node.InKernelMode);
 
         EcuExitLogic.Run(node, bus.Scheduler, respondOn: null);
 
-        Assert.Same(Gmw3110Persona.Instance, node.Persona);
+        Assert.False(node.InKernelMode);   // baseline GM stacks restored
+        Assert.Equal(new[] { "J1979", "GMW3110" }, node.Stacks.Select(b => b.Stack.Standard).ToArray());
     }
 
     [Fact]
@@ -40,11 +42,11 @@ public sealed class EcuExitLogicPersonaTests
 
         // ford-uds is loaded from the config file (user state), not a runtime
         // handover - it must survive a reset/exit.
-        node.Persona = FordUdsPersona.Instance;
+        node.PersonaId = "ford-uds";
 
         EcuExitLogic.Run(node, bus.Scheduler, respondOn: null);
 
-        Assert.Same(FordUdsPersona.Instance, node.Persona);
+        Assert.Equal("ford-uds", node.PersonaId);
     }
 
     [Fact]
@@ -56,6 +58,6 @@ public sealed class EcuExitLogicPersonaTests
 
         EcuExitLogic.Run(node, bus.Scheduler, respondOn: null);
 
-        Assert.Same(Gmw3110Persona.Instance, node.Persona);
+        Assert.Equal("gmw3110", node.PersonaId);
     }
 }

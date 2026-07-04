@@ -64,7 +64,7 @@ public sealed class PidViewModel : NotifyPropertyChangedBase
             // so they can correct it, matching the Size column's validation.
             if (parent.IsIdentifierTaken(Model, Model.Mode, value))
             {
-                string label = Model.Mode == PidMode.Mode2D ? $"address 0x{value:X6}" : $"DID ${value & 0xFF:X2}";
+                string label = Model.Mode is PidMode.Mode2D or PidMode.Mode23 ? $"address 0x{value:X6}" : $"DID ${value & 0xFF:X2}";
                 SetError(nameof(AddressHex), $"Another row in this mode already uses {label}.");
                 return;
             }
@@ -98,6 +98,7 @@ public sealed class PidViewModel : NotifyPropertyChangedBase
             OnPropertyChanged(nameof(IsMode1A));
             OnPropertyChanged(nameof(IsMode22));
             OnPropertyChanged(nameof(IsMode2D));
+            OnPropertyChanged(nameof(IsMode23));
             OnPropertyChanged(nameof(IsCatalogueDriven));
             OnPropertyChanged(nameof(IsHandRolled));
             OnPropertyChanged(nameof(IdentifierCatalogue));
@@ -111,6 +112,7 @@ public sealed class PidViewModel : NotifyPropertyChangedBase
     public bool IsMode1A => Model.Mode == PidMode.Mode1A;
     public bool IsMode22 => Model.Mode == PidMode.Mode22;
     public bool IsMode2D => Model.Mode == PidMode.Mode2D;
+    public bool IsMode23 => Model.Mode == PidMode.Mode23;
 
     // Spec-defined name for the configured identifier, when known. Surfaced
     // as the Identifier cell tooltip so the user can hover a row to confirm
@@ -129,10 +131,10 @@ public sealed class PidViewModel : NotifyPropertyChangedBase
     // PID from scratch (typically mirroring a memory-mapped value the real
     // ECU doesn't natively expose).
     // $22 alone uses the catalogue dropdown (a big 2-byte DID library worth picking from). $1A shows just the raw DID
-    // hex - the identity DIDs are few and the user thinks in "$90", not a catalogue name - and $2D is a hand-rolled
-    // 32-bit address. Both of the latter use the plain hex text box.
+    // hex - the identity DIDs are few and the user thinks in "$90", not a catalogue name - and $2D / $23 are hand-rolled
+    // 32-bit addresses. All of the latter use the plain hex text box.
     public bool IsCatalogueDriven => Model.Mode == PidMode.Mode22;
-    public bool IsHandRolled      => Model.Mode is PidMode.Mode1A or PidMode.Mode2D;
+    public bool IsHandRolled      => Model.Mode is PidMode.Mode1A or PidMode.Mode2D or PidMode.Mode23;
 
     // The picker list for the current mode. Bound to the Identifier cell's ComboBox.ItemsSource on $22 rows; empty
     // (and the cell collapses to a TextBox) for $1A/$2D. Identifiers another row in this mode already serves are
@@ -145,7 +147,7 @@ public sealed class PidViewModel : NotifyPropertyChangedBase
         {
             // Persona-scoped: a Ford-persona ECU offers the Ford $22 DID dump,
             // every other persona the GM set (PidCatalogue.For routes on the id).
-            var full = PidCatalogue.For(Model.Mode, parent.Model.Persona.Id);
+            var full = PidCatalogue.For(Model.Mode, parent.Model.PersonaId);
             var taken = parent.IdentifiersInUse(Model.Mode, exclude: Model);
             if (taken.Count == 0) return full;
             return full.Where(e => !taken.Contains(Pid.StoreKeyFor(Model.Mode, e.Identifier))).ToList();
@@ -168,6 +170,12 @@ public sealed class PidViewModel : NotifyPropertyChangedBase
         set
         {
             if (value is null) return;
+            // Already the current selection - bail out. Critical: applying the selection raises IdentifierCatalogue
+            // (NotifyIdentifierSetChanged), which swaps the ComboBox's ItemsSource; WPF re-coerces SelectedItem and
+            // writes the same value back through the TwoWay binding. Without this guard that bounce re-enters the full
+            // body, re-raises IdentifierCatalogue, and recurses to a StackOverflow. Mirrors the Address/Mode setters'
+            // same-value early-out.
+            if (value.Identifier == Model.Address) return;
             // Refuse a duplicate identifier - each DID gets exactly one row per mode (the per-mode store would keep
             // only the last one and shadow the rest on the wire). The picker already hides taken identifiers; this is
             // the backstop for a stale-open dropdown. Snap the combo back to the current selection.
@@ -217,6 +225,10 @@ public sealed class PidViewModel : NotifyPropertyChangedBase
     //                        cover the full GM ECU code/calibration address
     //                        space (typical bins are <= 2 MiB). Addresses
     //                        above $FFFFFF widen automatically.
+    //   Mode23 -> "0xXXXXXXXX" for the 32-bit $23 ReadMemoryByAddress target -
+    //                        shown zero-padded to 8 digits since a memory
+    //                        pointer (Ford reads at 0x000100C0 etc.) reads
+    //                        clearer as a full 32-bit word.
     // The setter accepts any of those forms regardless of mode so quick
     // edits don't fight the formatter.
     public string AddressHex
@@ -225,6 +237,9 @@ public sealed class PidViewModel : NotifyPropertyChangedBase
         {
             PidMode.Mode1A => $"${(byte)(Model.Address & 0xFF):X2}",
             PidMode.Mode2D => $"0x{Model.Address:X6}",
+            // $23 ReadMemoryByAddress targets a full 32-bit memory address (Ford reads land at e.g. 0x000100C0), so
+            // show all 8 hex digits rather than the 6 $2D uses - a memory pointer reads clearer zero-padded to 32 bits.
+            PidMode.Mode23 => $"0x{Model.Address:X8}",
             _              => Model.Address <= 0xFFFF ? $"${Model.Address:X4}" : $"0x{Model.Address:X6}",
         };
         set

@@ -3,7 +3,7 @@ using System.Text.Json;
 namespace Core.Security;
 
 // The seed/key algorithm strategy injected into Gmw3110_2010_Generic.
-// Implementations supply only the math — the generic module handles
+// Implementations supply only the math - the generic module handles
 // every protocol-envelope concern (length validation, subfunction parity,
 // pending-seed tracking, NRC dispatch, lockout / attempt counting,
 // P3C interaction).
@@ -13,7 +13,7 @@ namespace Core.Security;
 // they used (≤ the buffer size).
 public interface ISeedKeyAlgorithm
 {
-    /// <summary>Stable identifier (informational — selection happens at the module level).</summary>
+    /// <summary>Stable identifier (informational - selection happens at the module level).</summary>
     string Id { get; }
 
     /// <summary>Maximum seed length in bytes the generic module should buffer for. 2 is typical for GMW3110.</summary>

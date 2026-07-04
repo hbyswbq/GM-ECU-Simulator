@@ -42,16 +42,16 @@ public static class BusConfigBanner
         yield return $"#     Security:      module={securityId} config={securityConfig}";
 
         yield return $"#     Programmed:    state=0x{node.ProgrammedState:X2}";
-        yield return $"#     Persona:       {node.Persona.GetType().Name}";
+        yield return $"#     Standard:      {node.PersonaId}";
         yield return $"#     PIDs:          {node.AllPids.Count()}   DIDs: {node.Identifiers.Count}";
 
         // Ford UDS extras: flash bin backing Service $23 reads. Surfaced
         // here because a missing/wrong flashBinPath silently NRCs every $23
         // and PCMTec shows the user "Unknown Vehicle / CONDITIONS_NOT_CORRECT"
         // with no on-screen hint that the bin failed to load.
-        if (node.Persona.Id == "ford-uds")
+        if (node.PersonaId == "ford-uds")
         {
-            int size = Core.Ecu.Personas.FordUdsPersona.FlashBinSize;
+            int size = Core.Protocol.FordUdsDispatch.FlashBinSize;
             yield return size > 0
                 ? $"#     FlashBin:      loaded, {size:N0} bytes (backs Service $23)"
                 : $"#     FlashBin:      (NOT LOADED - Service $23 will NRC $22; set ecu.flashBinPath in config)";

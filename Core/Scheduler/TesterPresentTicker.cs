@@ -1,4 +1,3 @@
-using Common.Protocol;
 using Core.Bus;
 using Core.Ecu;
 using Core.Services;
@@ -6,10 +5,13 @@ using Core.Services;
 namespace Core.Scheduler;
 
 // Background ticker that increments every ECU's TesterPresent timer and
-// fires Exit_Diagnostic_Services() when one of them passes P3Cnom. Per
-// GMW3110 §6.2.4 the ECU must time out at >= P3Cnom (5000 ms) and
-// <= P3Cmax (5100 ms); we tick at 50 ms granularity which keeps the
-// timeout inside that 100 ms tolerance band.
+// fires Exit_Diagnostic_Services() when one of them passes its session
+// timeout. The threshold is per-node (EcuNode.SessionTimeoutMs) so it tracks
+// the ECU's active protocol stack - GMW3110 P3Cnom (5000 ms) or the UDS S3
+// timer - and honours any per-ECU SessionTimeoutOverrideMs. Per GMW3110
+// §6.2.4 a GM ECU must time out at >= P3Cnom (5000 ms) and <= P3Cmax
+// (5100 ms); we tick at 50 ms granularity which keeps the timeout inside
+// that 100 ms tolerance band.
 public sealed class TesterPresentTicker : IDisposable
 {
     private const int TickPeriodMs = 50;
@@ -43,7 +45,7 @@ public sealed class TesterPresentTicker : IDisposable
         {
             // Atomic check-and-advance under the state's lock so a $3E reset
             // landing mid-tick is never swallowed.
-            if (node.State.TesterPresent.TickAndCheckTimeout(delta, Timing.P3Cnom))
+            if (node.State.TesterPresent.TickAndCheckTimeout(delta, node.SessionTimeoutMs))
             {
                 EcuExitLogic.Run(node, scheduler, node.State.LastEnhancedChannel);
                 anyTimedOut = true;

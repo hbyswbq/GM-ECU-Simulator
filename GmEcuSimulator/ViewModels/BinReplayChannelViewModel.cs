@@ -9,7 +9,7 @@ namespace GmEcuSimulator.ViewModels;
 public sealed class BinReplayChannelViewModel : NotifyPropertyChangedBase
 {
     private readonly BinReplayCoordinator coord;
-    private string liveValue = "—";
+    private string liveValue = "-";
 
     public BinReplayChannelViewModel(BinChannelHeader header, int channelIndex, BinReplayCoordinator coord)
     {

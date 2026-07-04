@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using Common.PassThru;
 using Common.Wire;
 using Core.Bus;
-using Core.Ecu.Personas;
+using Core.Protocol;
 using EcuSimulator.Tests.TestHelpers;
 using Shim.Ipc;
 using Xunit;
@@ -57,7 +57,7 @@ public class ForScanProbeBusLogTests
     {
         var bus = new VirtualBus();
         var node = NodeFactory.CreateNode();          // PhysReq $7E0 / UsdtResp $7E8
-        node.Persona = FordUdsPersona.Instance;
+        node.PersonaId = "ford-uds";
         bus.AddNode(node);
 
         var (channelId, dispatcher, log) = Open(bus);

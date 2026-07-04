@@ -1,5 +1,5 @@
 using Common.Persistence;
-using Core.Ecu.Personas;
+using Core.Protocol;
 using Core.Persistence;
 using EcuSimulator.Tests.TestHelpers;
 using Xunit;
@@ -14,11 +14,9 @@ namespace EcuSimulator.Tests.Persistence;
 // point - a copy in the repo root drifted out of sync once already.
 //
 // History: the first version of this preset was written with PascalCase
-// keys ("Version", "Ecus", "Name", "PersonaId") and version=1. The serializer
-// is configured with JsonNamingPolicy.CamelCase + Version validation that
-// rejects below MinSupportedVersion (1)... but cfg.Version = 1 actually
-// passed the range check while the PascalCase keys silently deserialised to
-// every property's default value, including Ecus=[]. The simulator then sat
+// keys ("Version", "Ecus", "Name", "PersonaId"). The serializer is configured
+// with JsonNamingPolicy.CamelCase, so the PascalCase keys silently deserialised
+// to every property's default value, including Ecus=[]. The simulator then sat
 // there with zero ECUs and no on-screen indication of why. Hence this test.
 [Collection(FordUdsPersonaCollection.Name)]
 public sealed class FordUdsPresetTests
@@ -63,6 +61,6 @@ public sealed class FordUdsPresetTests
         var cfg = ConfigSerializer.Deserialize(json);
         var node = ConfigStore.EcuNodeFrom(cfg.Ecus[0]);
 
-        Assert.Same(FordUdsPersona.Instance, node.Persona);
+        Assert.Equal("ford-uds", node.PersonaId);
     }
 }

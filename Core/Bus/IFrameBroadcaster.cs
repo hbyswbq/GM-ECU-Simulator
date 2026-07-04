@@ -8,7 +8,7 @@ namespace Core.Bus;
 // the diagnostic request - so a frame enqueued on the request channel
 // never reaches the broadcast filter and PCMTec sits waiting forever.
 //
-// IFrameBroadcaster lets a persona/handler shove a single raw-CAN frame at
+// IFrameBroadcaster lets a stack/handler shove a single raw-CAN frame at
 // every active channel on the bus; each channel applies its own filter
 // table and only accepts frames matching its PASS / FLOW_CONTROL filters.
 // The implementation lives in Shim (where the channel collection lives);

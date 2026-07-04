@@ -8,7 +8,7 @@ namespace Common;
 // state persists to ecu_simulator.mode.json. DpsSimulator is the single-ECU
 // DPS programming workflow - prime from an archive, drive a target ECU through
 // a programming session. It folds together the former separate DpsWrite /
-// DpsRead modes into one persona. OBD-II Mode $01 emulation is supported inside
+// DpsRead modes into one mode. OBD-II Mode $01 emulation is supported inside
 // EcuSimulator via per-PID PidMode selection - no separate top-level mode.
 public enum AppMode
 {

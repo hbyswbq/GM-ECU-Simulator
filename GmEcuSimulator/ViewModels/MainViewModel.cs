@@ -4,6 +4,7 @@ using Common.Protocol;
 using Core.Bus;
 using Core.Dps;
 using Core.Ecu;
+using Core.Security;
 using Core.Identification;
 using Core.Persistence;
 using Core.Replay;
@@ -121,6 +122,13 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
         new ModeOption(AppMode.EcuSimulator, ConnectionType.RawCanTcp),
         new ModeOption(AppMode.DpsSimulator, ConnectionType.J2534),
     };
+
+    /// <summary>
+    /// "Version 0.4.2" - shown inline on the About menu. Sourced from
+    /// <see cref="AppInfo"/>, which reads the build-time git-tag stamp, so it
+    /// always matches the GitHub release the binary was built from.
+    /// </summary>
+    public string AppVersionDisplay => AppInfo.VersionDisplay;
 
     public MainViewModel(VirtualBus bus, BinReplayCoordinator replay, NamedPipeServer pipeServer,
                          RawCanTcpServer rawCanServer)
@@ -1214,6 +1222,7 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
             PhysicalRequestCanId = req,
             UsdtResponseCanId = (ushort)(req + 0x008),
             UudtResponseCanId = (ushort)(req - 0x1F8),       // 0x7E0 -> 0x5E8
+            SecurityModule = SecurityModuleRegistry.Create("gm-e38-2byte"),
         };
         // A new ECU starts with no $1A/$22 rows. Seeding the baseline identity + curated live $22 set is an explicit
         // action now (the "Seed default PIDs" button in the editor's Diagnostic PIDs header -> EcuViewModel.SeedDefaultPids),

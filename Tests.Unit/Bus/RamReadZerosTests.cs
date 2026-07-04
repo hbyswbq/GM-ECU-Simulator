@@ -2,7 +2,7 @@ using Common.PassThru;
 using Common.Protocol;
 using Core.Bus;
 using Core.Ecu;
-using Core.Ecu.Personas;
+using Core.Protocol;
 using Core.Transport;
 using EcuSimulator.Tests.TestHelpers;
 using Xunit;
@@ -12,12 +12,12 @@ namespace EcuSimulator.Tests.Bus;
 // EcuNode.RamReadReturnsZeros: when ticked, a $23 ReadMemoryByAddress for an
 // address beyond the loaded flash bin (RAM) is answered with a positive $63
 // reply padded with zeros instead of NRC $31 RequestOutOfRange. The check
-// lives in VirtualBus.DispatchUsdt before the persona dispatch, so it applies
-// to every persona; in-bin reads still fall through to the persona.
+// lives in VirtualBus.DispatchUsdt before the stack dispatch, so it applies
+// to every stack; in-bin reads still fall through to the owning stack's handler.
 //
 // These drive the real inbound path (DispatchHostTx with a single ISO-TP frame)
 // rather than calling the private DispatchUsdt directly. The RAM boundary reads
-// the FordUdsPersona singleton's flash-bin size, so this class joins the
+// the FordUdsDispatch singleton's flash-bin size, so this class joins the
 // FordUdsPersona collection and resets the bin around each test.
 [Collection(FordUdsPersonaCollection.Name)]
 public sealed class RamReadZerosTests
@@ -31,11 +31,11 @@ public sealed class RamReadZerosTests
     };
 
     private static (VirtualBus bus, EcuNode node, ChannelSession ch) Setup(
-        IDiagnosticPersona persona, bool ramReadReturnsZeros)
+        string personaId, bool ramReadReturnsZeros)
     {
         var bus = new VirtualBus();
         var node = NodeFactory.CreateNode();
-        node.Persona = persona;
+        node.PersonaId = personaId;
         node.RamReadReturnsZeros = ramReadReturnsZeros;
         bus.AddNode(node);
         var ch = new ChannelSession { Id = 1, Protocol = ProtocolID.CAN, Baud = 500_000, Bus = bus };
@@ -58,10 +58,10 @@ public sealed class RamReadZerosTests
     public void Enabled_NoBin_RamRead_ReturnsPositiveZeros_OnAnyPersona()
     {
         // Default GM persona doesn't even handle $23 - the RAM fallback runs
-        // before persona dispatch, so the read is answered regardless. No bin
+        // before stack dispatch, so the read is answered regardless. No bin
         // loaded -> every address is RAM.
-        FordUdsPersona.LoadFlashBin((byte[]?)null);
-        var (bus, _, ch) = Setup(Gmw3110Persona.Instance, ramReadReturnsZeros: true);
+        FordUdsDispatch.LoadFlashBin((byte[]?)null);
+        var (bus, _, ch) = Setup("gmw3110", ramReadReturnsZeros: true);
 
         // The motivating example: addr=$003FA0D4, len=1.
         SendSingleFrame(bus, ch, ReadMemoryRequest(0x003FA0D4, 1));
@@ -74,8 +74,8 @@ public sealed class RamReadZerosTests
     [Fact]
     public void Enabled_RamRead_PadsRequestedLengthWithZeros()
     {
-        FordUdsPersona.LoadFlashBin((byte[]?)null);
-        var (bus, _, ch) = Setup(Gmw3110Persona.Instance, ramReadReturnsZeros: true);
+        FordUdsDispatch.LoadFlashBin((byte[]?)null);
+        var (bus, _, ch) = Setup("gmw3110", ramReadReturnsZeros: true);
 
         SendSingleFrame(bus, ch, ReadMemoryRequest(0x003FA0D4, 4));
 
@@ -91,10 +91,10 @@ public sealed class RamReadZerosTests
         // bin length.
         var bin = new byte[0x20000];
         System.Text.Encoding.ASCII.GetBytes("6FPA", 0, 4, bin, 0x100C0);
-        FordUdsPersona.LoadFlashBin(bin);
+        FordUdsDispatch.LoadFlashBin(bin);
         try
         {
-            var (bus, _, ch) = Setup(FordUdsPersona.Instance, ramReadReturnsZeros: true);
+            var (bus, _, ch) = Setup("ford-uds", ramReadReturnsZeros: true);
 
             SendSingleFrame(bus, ch, ReadMemoryRequest(0x000100C0, 4));
 
@@ -103,7 +103,7 @@ public sealed class RamReadZerosTests
         }
         finally
         {
-            FordUdsPersona.LoadFlashBin((byte[]?)null);
+            FordUdsDispatch.LoadFlashBin((byte[]?)null);
         }
     }
 
@@ -113,10 +113,10 @@ public sealed class RamReadZerosTests
         // Flag off (the default): the Ford persona's spec-correct NRC $31 stands
         // for an out-of-range read - exactly the behaviour the example shows.
         var bin = new byte[16];
-        FordUdsPersona.LoadFlashBin(bin);
+        FordUdsDispatch.LoadFlashBin(bin);
         try
         {
-            var (bus, _, ch) = Setup(FordUdsPersona.Instance, ramReadReturnsZeros: false);
+            var (bus, _, ch) = Setup("ford-uds", ramReadReturnsZeros: false);
 
             SendSingleFrame(bus, ch, ReadMemoryRequest(0x003FA0D4, 1));
 
@@ -125,7 +125,7 @@ public sealed class RamReadZerosTests
         }
         finally
         {
-            FordUdsPersona.LoadFlashBin((byte[]?)null);
+            FordUdsDispatch.LoadFlashBin((byte[]?)null);
         }
     }
 }

@@ -1,6 +1,6 @@
 using Common.PassThru;
 using Core.Bus;
-using Core.Ecu.Personas;
+using Core.Protocol;
 using EcuSimulator.Tests.TestHelpers;
 using Xunit;
 
@@ -8,7 +8,7 @@ namespace EcuSimulator.Tests.Bus;
 
 // Phase 6 broadcast plumbing. Covers:
 //   - VirtualBus.Broadcaster is null by default (no IPC session bound).
-//   - FordUdsPersona doesn't crash when bus.Broadcaster is null and
+//   - FordUdsDispatch doesn't crash when bus.Broadcaster is null and
 //     EnsureBroadcastStarted fires (timer ticks become no-ops).
 //   - When a IFrameBroadcaster fake is wired, the broadcast tick reaches it.
 [Collection(FordUdsPersonaCollection.Name)]
@@ -33,14 +33,14 @@ public sealed class FrameBroadcasterTests
         // Wire a fake broadcaster, send an $A1 to register a slot, send $A0
         // to kick off the broadcast loop, sleep a beat, expect a frame.
         // Drives the real TimerOnDelay so the test is integration-flavoured.
-        FordUdsPersona.StopBroadcast();           // clean slate
-        FordUdsPersona.ResetDmrSlotMap();
+        FordUdsDispatch.StopBroadcast();           // clean slate
+        FordUdsDispatch.ResetDmrSlotMap();
         var bus = new VirtualBus();
         var fake = new FakeBroadcaster();
         bus.Broadcaster = fake;
 
         var node = NodeFactory.CreateNode();
-        node.Persona = FordUdsPersona.Instance;
+        node.PersonaId = "ford-uds";
         var ch = new ChannelSession
         {
             Id = 1, Protocol = ProtocolID.CAN, Baud = 500_000, Bus = bus,
@@ -48,19 +48,19 @@ public sealed class FrameBroadcasterTests
 
         // Bind slot 0x08 -> 0x003F86EC via $A1 (verbatim PCMTec capture).
         byte[] a1 = { 0xA1, 0x08, 0x8C, 0x00, 0x3F, 0x86, 0xEC };
-        node.Persona.Dispatch(node, a1, ch, false, 0xA1, 0,
+        FordUdsDispatch.Instance.Dispatch(node, a1, ch, false, 0xA1, 0,
             new Core.Scheduler.DpidScheduler(bus), Common.Protocol.DiagnosticStack.Uds);
         ch.RxQueue.TryDequeue(out _); // drain echo
 
         // $A0 starts the broadcast.
         byte[] a0 = { 0xA0, 0x08 };
-        node.Persona.Dispatch(node, a0, ch, false, 0xA0, 0,
+        FordUdsDispatch.Instance.Dispatch(node, a0, ch, false, 0xA0, 0,
             new Core.Scheduler.DpidScheduler(bus), Common.Protocol.DiagnosticStack.Uds);
 
         // Give the 100ms timer a couple of cycles to fire.
         Thread.Sleep(350);
 
-        FordUdsPersona.StopBroadcast();
+        FordUdsDispatch.StopBroadcast();
 
         Assert.NotEmpty(fake.Frames);
         // Each tick emits one engine DMR frame per bound slot on 0x6A0 in the
@@ -95,28 +95,28 @@ public sealed class FrameBroadcasterTests
     [Fact]
     public void DmrValueBytes_TrackEngineRpm()
     {
-        FordUdsPersona.StopBroadcast();
-        FordUdsPersona.ResetDmrSlotMap();
+        FordUdsDispatch.StopBroadcast();
+        FordUdsDispatch.ResetDmrSlotMap();
         var bus = new VirtualBus();
         var fake = new FakeBroadcaster();
         bus.Broadcaster = fake;
 
         var node = NodeFactory.CreateNode();
-        node.Persona = FordUdsPersona.Instance;
+        node.PersonaId = "ford-uds";
         node.EngineModel.SetOverride(Common.Signals.SignalId.EngineRpm, 2500);  // pin RPM exactly
         var ch = new ChannelSession { Id = 1, Protocol = ProtocolID.CAN, Baud = 500_000, Bus = bus };
 
         byte[] a1 = { 0xA1, 0x08, 0x8C, 0x00, 0x3F, 0x86, 0xEC };               // bind slot 0x08
-        node.Persona.Dispatch(node, a1, ch, false, 0xA1, 0,
+        FordUdsDispatch.Instance.Dispatch(node, a1, ch, false, 0xA1, 0,
             new Core.Scheduler.DpidScheduler(bus), Common.Protocol.DiagnosticStack.Uds);
         ch.RxQueue.TryDequeue(out _);                                           // drain $A1 echo
 
         byte[] a0 = { 0xA0, 0x08 };                                            // start the stream
-        node.Persona.Dispatch(node, a0, ch, false, 0xA0, 0,
+        FordUdsDispatch.Instance.Dispatch(node, a0, ch, false, 0xA0, 0,
             new Core.Scheduler.DpidScheduler(bus), Common.Protocol.DiagnosticStack.Uds);
 
         Thread.Sleep(250);
-        FordUdsPersona.StopBroadcast();
+        FordUdsDispatch.StopBroadcast();
         node.EngineModel.ClearOverride(Common.Signals.SignalId.EngineRpm);
 
         // 2500 rpm -> DMR value = 32-bit big-endian IEEE-754 float 2500.0f = 0x451C4000;
@@ -133,14 +133,14 @@ public sealed class FrameBroadcasterTests
     [Fact]
     public void DmrValueBytes_UseSignalMappedToSlotAddress()
     {
-        FordUdsPersona.StopBroadcast();
-        FordUdsPersona.ResetDmrSlotMap();
+        FordUdsDispatch.StopBroadcast();
+        FordUdsDispatch.ResetDmrSlotMap();
         var bus = new VirtualBus();
         var fake = new FakeBroadcaster();
         bus.Broadcaster = fake;
 
         var node = NodeFactory.CreateNode();
-        node.Persona = FordUdsPersona.Instance;
+        node.PersonaId = "ford-uds";
         // Map the address slot 0x08's $A1 binds (0x003F86EC) to VehicleSpeed, pinned to 120.
         node.ReplaceDmrSignalMappings(new[]
         {
@@ -150,15 +150,15 @@ public sealed class FrameBroadcasterTests
         var ch = new ChannelSession { Id = 1, Protocol = ProtocolID.CAN, Baud = 500_000, Bus = bus };
 
         byte[] a1 = { 0xA1, 0x08, 0x8C, 0x00, 0x3F, 0x86, 0xEC };               // slot 0x08 -> 0x003F86EC
-        node.Persona.Dispatch(node, a1, ch, false, 0xA1, 0,
+        FordUdsDispatch.Instance.Dispatch(node, a1, ch, false, 0xA1, 0,
             new Core.Scheduler.DpidScheduler(bus), Common.Protocol.DiagnosticStack.Uds);
         ch.RxQueue.TryDequeue(out _);
         byte[] a0 = { 0xA0, 0x08 };
-        node.Persona.Dispatch(node, a0, ch, false, 0xA0, 0,
+        FordUdsDispatch.Instance.Dispatch(node, a0, ch, false, 0xA0, 0,
             new Core.Scheduler.DpidScheduler(bus), Common.Protocol.DiagnosticStack.Uds);
 
         Thread.Sleep(250);
-        FordUdsPersona.StopBroadcast();
+        FordUdsDispatch.StopBroadcast();
         node.EngineModel.ClearOverride(Common.Signals.SignalId.VehicleSpeed);
 
         // 120 km/h -> the slot carries VehicleSpeed (not RPM): BE float 120.0f = 0x42F00000.
@@ -170,14 +170,14 @@ public sealed class FrameBroadcasterTests
     [Fact]
     public void DmrValueBytes_ApplyEncodingScaleOffset()
     {
-        FordUdsPersona.StopBroadcast();
-        FordUdsPersona.ResetDmrSlotMap();
+        FordUdsDispatch.StopBroadcast();
+        FordUdsDispatch.ResetDmrSlotMap();
         var bus = new VirtualBus();
         var fake = new FakeBroadcaster();
         bus.Broadcaster = fake;
 
         var node = NodeFactory.CreateNode();
-        node.Persona = FordUdsPersona.Instance;
+        node.PersonaId = "ford-uds";
         // VehicleSpeed via UInt16BE with raw = speed*2 + 10.
         node.ReplaceDmrSignalMappings(new[]
         {
@@ -194,15 +194,15 @@ public sealed class FrameBroadcasterTests
         var ch = new ChannelSession { Id = 1, Protocol = ProtocolID.CAN, Baud = 500_000, Bus = bus };
 
         byte[] a1 = { 0xA1, 0x08, 0x8C, 0x00, 0x3F, 0x86, 0xEC };
-        node.Persona.Dispatch(node, a1, ch, false, 0xA1, 0,
+        FordUdsDispatch.Instance.Dispatch(node, a1, ch, false, 0xA1, 0,
             new Core.Scheduler.DpidScheduler(bus), Common.Protocol.DiagnosticStack.Uds);
         ch.RxQueue.TryDequeue(out _);
         byte[] a0 = { 0xA0, 0x08 };
-        node.Persona.Dispatch(node, a0, ch, false, 0xA0, 0,
+        FordUdsDispatch.Instance.Dispatch(node, a0, ch, false, 0xA0, 0,
             new Core.Scheduler.DpidScheduler(bus), Common.Protocol.DiagnosticStack.Uds);
 
         Thread.Sleep(250);
-        FordUdsPersona.StopBroadcast();
+        FordUdsDispatch.StopBroadcast();
         node.EngineModel.ClearOverride(Common.Signals.SignalId.VehicleSpeed);
 
         // raw = 100*2 + 10 = 210 = 0x00D2 (UInt16BE) -> frame[7..8] = 00 D2, frame[9..10] = 0.
@@ -214,7 +214,7 @@ public sealed class FrameBroadcasterTests
     [Fact]
     public void StopBroadcast_IsSafeWhenNothingRunning()
     {
-        FordUdsPersona.StopBroadcast(); // no exception
-        FordUdsPersona.StopBroadcast();
+        FordUdsDispatch.StopBroadcast(); // no exception
+        FordUdsDispatch.StopBroadcast();
     }
 }

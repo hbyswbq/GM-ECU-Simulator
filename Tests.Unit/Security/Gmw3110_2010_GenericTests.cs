@@ -125,7 +125,7 @@ public sealed class Gmw3110_2010_GenericTests
 
         Dispatch(0x27, 0x01);
 
-        // Processed normally — seed comes back.
+        // Processed normally - seed comes back.
         Assert.Equal(new byte[] { Service.Positive(Service.SecurityAccess), 0x01, 0x12, 0x34 }, Pop());
         Assert.Equal(0, node.State.SecurityFailedAttempts);
         Assert.Equal(0, node.State.SecurityLockoutUntilMs);
@@ -145,7 +145,7 @@ public sealed class Gmw3110_2010_GenericTests
     [Fact]
     public void Malformed_TooShort_ReturnsNrc12()
     {
-        // $27 alone (no subfunction) — payload length 1.
+        // $27 alone (no subfunction) - payload length 1.
         Dispatch(0x27);
 
         Assert.Equal(new byte[] { Service.NegativeResponse, Service.SecurityAccess, Nrc.SubFunctionNotSupportedInvalidFormat }, Pop());

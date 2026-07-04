@@ -598,6 +598,55 @@ public partial class MainWindow : Window
 
     private void OnExitClicked(object sender, RoutedEventArgs e) => Close();
 
+    // About > version line. Opens the themed About dialog. The version string
+    // comes from AppInfo, which reads the build-time git-tag stamp (see
+    // GmEcuSimulator.csproj StampVersionFromGit), so it matches the GitHub
+    // release the binary was built from. A "View releases" button jumps to the
+    // GitHub page the version is keyed to.
+    private void OnAboutClicked(object sender, RoutedEventArgs e)
+    {
+        Views.ThemedMessageBox.Show(
+            this,
+            $"About {AppInfo.ProductName}",
+            $"{AppInfo.ProductName}\n" +
+            $"Version {AppInfo.Version}\n\n" +
+            "GM (GMLAN / GMW3110-2010) ECU emulator that registers itself as a " +
+            "J2534 PassThru device (v04.04).\n\n" +
+            AppInfo.RepositoryUrl,
+            MessageBoxImage.Information,
+            new Views.ThemedDialogButton(
+                "View releases",
+                onClick: OpenReleasesPage),
+            new Views.ThemedDialogButton(
+                "Close",
+                isDefault: true,
+                isCancel: true,
+                primary: true));
+    }
+
+    // About > Protocols. Opens the canonical read-only registry of supported protocols / services
+    // (Views.ProtocolsWindow over ProtocolSupportRegistry) as a modal owned by the main shell.
+    private void OnProtocolsClicked(object sender, RoutedEventArgs e)
+    {
+        new Views.ProtocolsWindow { Owner = this }.ShowDialog();
+    }
+
+    // About > View releases on GitHub. Same target as the dialog's button.
+    private void OnViewReleasesClicked(object sender, RoutedEventArgs e) => OpenReleasesPage();
+
+    private static void OpenReleasesPage()
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = AppInfo.ReleasesUrl,
+                UseShellExecute = true,
+            });
+        }
+        catch { /* browser launch failure is non-fatal */ }
+    }
+
     // ---------------- Live-tile dashboard: picker + drag-reorder ----------------
 
     // Drag payload format. The dragged tile itself is held in draggedTile; the

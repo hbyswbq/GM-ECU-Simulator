@@ -2,7 +2,7 @@ namespace Common.Glitch;
 
 // Glitch-injection configuration for stress-testing host applications.
 //
-// At runtime (when wired up — currently NOT wired) the simulator's service
+// At runtime (when wired up - currently NOT wired) the simulator's service
 // dispatcher consults each ECU's GlitchConfig before processing a request:
 // if Enabled is true and a uniform random draw on [0,1) falls below the
 // service-specific Probability, the dispatcher applies the configured Action
@@ -11,17 +11,17 @@ namespace Common.Glitch;
 // This file defines the configuration shape only. The injection logic lives
 // in Core/Services (when implemented). Keeping the types in Common means
 // both runtime code and JSON persistence (Common.Persistence) reference the
-// same definitions — no DTO/model duplication for plain settings.
+// same definitions - no DTO/model duplication for plain settings.
 
 public enum GlitchAction
 {
-    /// <summary>Normal response — no glitch even if Probability roll succeeds.</summary>
+    /// <summary>Normal response - no glitch even if Probability roll succeeds.</summary>
     None = 0,
 
     /// <summary>Return $7F SID NRC, where NRC is randomly chosen from <see cref="GlitchConfig.NrcPool"/>.</summary>
     EmitNrc = 1,
 
-    /// <summary>Silently drop the request — no response is sent. Forces the host to hit its read timeout.</summary>
+    /// <summary>Silently drop the request - no response is sent. Forces the host to hit its read timeout.</summary>
     Drop = 2,
 
     /// <summary>Flip a random byte in the outgoing response payload before enqueue.</summary>
@@ -30,7 +30,7 @@ public enum GlitchAction
     /// <summary>
     /// Randomly choose between <see cref="EmitNrc"/>, <see cref="Drop"/>, and
     /// <see cref="CorruptByte"/> on each glitch firing. The choice is made
-    /// per-glitch, not per-session — every time the probability roll succeeds
+    /// per-glitch, not per-session - every time the probability roll succeeds
     /// the dispatcher draws a fresh action from this trio. <see cref="None"/>
     /// is excluded from the random pool (a None pick would be indistinguishable
     /// from the probability roll having failed).

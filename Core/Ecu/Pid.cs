@@ -9,8 +9,8 @@ namespace Core.Ecu;
 // underlying IWaveformGenerator so the next scheduler tick picks up the
 // new shape automatically.
 //
-// Address is `uint` (32-bit) so memory addresses like 0x002C0000 — typical
-// for ECU RAM/flash — fit. Wire-protocol-readable PIDs ($22) only see the
+// Address is `uint` (32-bit) so memory addresses like 0x002C0000 - typical
+// for ECU RAM/flash - fit. Wire-protocol-readable PIDs ($22) only see the
 // low 16 bits since the spec defines a 2-byte PID id; longer addresses can
 // only be reached by mapping them via $2D first (which assigns a 16-bit
 // short PID that mirrors the 32-bit address).
@@ -26,15 +26,16 @@ public sealed class Pid
 
     // Which service this row serves on the wire. The Address field's meaning
     // depends on this: Mode22 = 2-byte wire PID id; Mode1A = 1-byte DID in
-    // the low 8 bits; Mode2D = 32-bit memory address (wire PID id is derived
-    // via WireLookupId). Defaults to Mode22 so legacy configs round-trip.
+    // the low 8 bits; Mode2D / Mode23 = 32-bit memory address (Mode2D's wire PID
+    // id is derived via WireLookupId; Mode23 answers $23 ReadMemoryByAddress
+    // directly by address). Defaults to Mode22 so legacy configs round-trip.
     public PidMode Mode { get; set; } = PidMode.Mode22;
 
     // 2-byte wire PID id the $22 dispatcher matches against. Mode22 echoes
     // Address verbatim; Mode2D derives the alias as 0xF000 | (addr & 0x0FFF)
     // (GM's dynamic-PID range, deterministic so the DataLogger profile stays
-    // valid across reloads without persisting the alias). Mode1A rows aren't
-    // reachable through $22 - returns null.
+    // valid across reloads without persisting the alias). Mode1A and Mode23 rows
+    // aren't reachable through $22 ($23 has its own service) - returns null.
     public ushort? WireLookupId => Mode switch
     {
         PidMode.Mode22 => (ushort)(Address & 0xFFFF),
@@ -43,7 +44,7 @@ public sealed class Pid
     };
 
     // The key this PID occupies in its per-mode store (see EcuNode.AddPid): the 1-byte DID for $1A, the 2-byte wire
-    // PID for $22, the full 32-bit address for $2D. Two rows in the same mode that share this key collide - the store
+    // PID for $22, the full 32-bit address for $2D / $23. Two rows in the same mode that share this key collide - the store
     // keeps only the last one added and silently shadows the rest on the wire - so the editor uses it to keep each
     // identifier unique within a mode.
     public uint StoreKey => StoreKeyFor(Mode, Address);

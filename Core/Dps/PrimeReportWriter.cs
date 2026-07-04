@@ -58,7 +58,7 @@ public static class PrimeReportWriter
         sb.AppendLine($"  UudtResponseCanId:     0x{node.UudtResponseCanId:X3}");
         sb.AppendLine($"  DiagnosticAddress:     0x{node.DiagnosticAddress:X2}");
         sb.AppendLine($"  ProgrammedState:       0x{node.ProgrammedState:X2}");
-        sb.AppendLine($"  Persona:               {node.Persona.Id}");
+        sb.AppendLine($"  Standard:              {node.PersonaId}");
         sb.AppendLine($"  SecurityModule:        {node.SecurityModule?.Id ?? "(none)"}");
         sb.AppendLine($"  DownloadAddrBytes:     {node.State.DownloadAddressByteCount}");
         sb.AppendLine($"  FlowControl BS:        {node.FlowControlBlockSize}");

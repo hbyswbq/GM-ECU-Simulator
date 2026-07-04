@@ -73,7 +73,7 @@ public static class Service2DHandler
 
         // Refuse to define a dynamic PID at an id that collides with an
         // existing static PID. EcuNode.AddPid replaces by address, and on
-        // session-end EcuExitLogic removes by address — together they would
+        // session-end EcuExitLogic removes by address - together they would
         // silently delete the static PID for the rest of the session.
         // (A self-collision where pidId == memoryAddress is fine; that just
         // re-registers the existing PID with possibly-new size.)

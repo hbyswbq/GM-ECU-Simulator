@@ -12,86 +12,12 @@ namespace Common.Persistence;
 // convention so a human can hand-edit. PidDto and WaveformDto stay flat - easier to diff in source control than a
 // deeply-nested structure.
 //
-// Schema version is incremented when a change is non-additive; loaders must handle older versions or fail with a clear
-// error.
-//
-// v2 added the optional BinReplay section (path + auto-load + loop mode). v1 files load with BinReplay == null and
-// round-trip cleanly.
-//
-// v3 added per-ECU SecurityModuleId + SecurityModuleConfig for $27 SecurityAccess support. v1/v2 files load with both
-// null → $27 returns NRC $11 as before.
-//
-// v4 added per-ECU Identifiers (list of IdentifierDto) for $1A ReadDataByIdentifier responses. (Dropped in v12 - see
-// below.)
-//
-// v5 added per-ECU BypassSecurity flag and per-ECU ISO-TP FlowControl bytes (FlowControlBlockSize /
-// FlowControlSeparationTime). v1-v4 files load with BypassSecurity false and FC bytes 0/0, preserving spec-correct $27
-// + most-permissive ISO-TP behaviour.
-//
-// v6 added the BootloaderCapture section (Enabled flag + optional directory override). v1-v5 files load with
-// BootloaderCapture == null - the Bootloader tab toggle stays at its default (off) and the spec-correct NRC $31 path
-// runs in Service36Handler.
-//
-// v7 added per-ECU DownloadAddressByteCount (number of bytes in the $36 startingAddress field, 2..4). v1-v6 files load
-// with the field absent -> the loader defaults it to 4 to match GMW3110-2010-era ECUs like T43; older 3-byte ECUs need
-// an explicit override in the saved config.
-//
-// v8 dropped per-ECU AllowPeriodicTesterPresent. The setting hoisted to a simulator-wide preference
-// (AppSettings.AllowPeriodicTesterPresent, exposed through the ECU menu). v1-v7 configs still load: STJ silently
-// ignores the now-unknown property. A per-ECU `false` in an old config is NOT migrated into the global - users who had
-// it disabled on any ECU need to toggle the menu item off after upgrading.
-//
-// v9 added per-ECU DiagnosticAddress (returned by $1A $B0). Defaults to 0 for v1-v8 configs that lack the field; users
-// set it to match the low byte of PhysicalRequestCanId. (v9 also briefly carried a SpsType enum for the blank-ECU
-// activation flow; that was removed once we collapsed the persona to always-on Type-A behaviour - the field is silently
-// dropped on load.)
-//
-// v10 added IdentifierDto.Source per-row provenance tracking. (Dropped in v12 along with the rest of IdentifierDto.)
-//
-// v11 dropped per-ECU BypassSecurity. The per-ECU security module dropdown covers the same use case (select
-// gm-programming-bypass for stub-security ECUs). v1-v10 configs still load: STJ silently ignores the now-unknown
-// property. Users who had it enabled need to switch the affected ECU's security module to gm-programming-bypass after
-// upgrading.
-//
-// v12 dropped per-ECU Identifiers. DIDs are now seeded at runtime only (Bin menu -> Load info from BIN... /
-// Auto-populate DIDs, or File -> Prime from DPS archive). v1-v11 configs still load: STJ silently ignores the
-// now-unknown property, so any persisted DIDs are not carried over and the user has to re-seed via the Bin menu or a
-// primed archive.
-//
-// v13 dropped per-ECU DownloadAddressByteCount (the v7 field). The $36 startingAddress is fixed at 4 bytes in
-// production to match T43-era and later GM ECUs (kernel destinations like 0x003FAFE0 don't fit in 3 bytes, and tools
-// like 6Speed.T43 always send the full 4). Tests that need to exercise 2/3-byte address layouts override
-// NodeState.DownloadAddressByteCount directly. v1-v12 configs still load: STJ silently ignores the now-unknown
-// property.
-//
-// v14 dropped the FC.STmin half of the v5 FlowControl pair. FC.BS stays (6Speed.T43 needs BS=1); FC.STmin was never
-// needed in practice and the most-permissive 0 is always correct. v1-v13 configs still load: STJ silently ignores the
-// now-unknown FlowControlSeparationTime property.
-//
-// v15 added PidDto.Mode for multi-mode PID rows ($1A / $22 / $2D in the same grid). Absent in v1-v14 configs - the
-// loader defaults it to PidMode.Mode22, which is the legacy single-mode behaviour, so older configs round-trip
-// identically. Mode2D rows store the 32-bit memory address in PidDto.Address; the wire PID id is derived at runtime as
-// 0xF000 | (addr & 0x0FFF) and never persisted. Mode1A rows store the DID in the low 8 bits of Address; they superseded
-// the v12-dropped IdentifierDto for user-editable DIDs.
-//
-// v16 is the clean-break baseline for the signal-centric redesign. MinSupportedVersion is raised to 16, so configs
-// written before the redesign are now REJECTED with a clear version error rather than silently losing fields - the
-// pre-redesign schema is not migrated. v16 carries PidDto.Signal (the signal-backed source) and EcuDto.Scenario (the
-// boot operating point). It also carries EcuDto.Mode1Disabled - the delta of built-in $01 PIDs the user has turned OFF
-// (the supported $01 subset is the E38/E67 default minus this list; absent/empty means the full default set stands).
-//
-// v17 added the optional top-level LiveTiles list - the ordered set of PIDs pinned to the main window's live-tile
-// dashboard. Each entry references a PID by (Ecu name, Mode, Address); tiles whose target no longer resolves are
-// pruned on load. Cross-ECU, so it lives at the config root rather than under EcuDto. v1-v16 files load with
-// LiveTiles == null (empty dashboard) and round-trip cleanly; MinSupportedVersion stays 16.
-//
-// v18 added per-ECU EcuDto.Broadcasts - the DBC-driven CAN broadcast set (each a message = arbitration ID + DLC +
-// period carrying bit-packed signals mapped to live engine signals / constants). Additive: v16/v17 files load with
-// Broadcasts == null (no broadcast traffic) and round-trip cleanly; MinSupportedVersion stays 16.
+// Schema version 1 is the fresh-start baseline - the accumulated v2-v19 migration history was collapsed into this
+// single version. ConfigSerializer stamps every saved file with CurrentVersion and refuses to load a file that claims
+// a newer version than this build knows (a forward-compat guard); there is no back-version migration.
 public sealed class SimulatorConfig
 {
-    public const int CurrentVersion = 18;
-    public const int MinSupportedVersion = 16;
+    public const int CurrentVersion = 1;
 
     public int Version { get; set; } = CurrentVersion;
     public string? Description { get; set; }
@@ -136,8 +62,7 @@ public sealed class SimulatorConfig
 //   Source = Obd2 -> a built-in $01 (OBD-II / J1979) PID, keyed by (Ecu, Address),
 //                    where Address holds the 1-byte $01 PID id (Mode is unused).
 //
-// Source is absent in the first v17 files written before $01 tiles existed; it
-// defaults to Pid so those still resolve.
+// Source defaults to Pid when absent, so a tile written before $01 tiles existed still resolves.
 public sealed class LiveTileDto
 {
     public LiveTileSource Source { get; set; } = LiveTileSource.Pid;
@@ -227,19 +152,49 @@ public sealed class EcuDto
     // configs load with unchanged behaviour.
     public bool RamReadReturnsZeros { get; set; }
 
+    // When true, a Ford $A1 SETUP_DMR request whose RAM address is NOT in this
+    // ECU's $A1 (SetupDataMode) grid gets NRC $31 RequestOutOfRange instead of
+    // the positive E1 echo. See EcuNode.RejectUnmappedDmr. Default false ->
+    // accept-all (the capture-friendly behaviour), so old configs are unchanged.
+    public bool RejectUnmappedDmr { get; set; }
+
+    // Which GM flash-READ dialect this ECU answers on $35/$36 (GM persona only):
+    // "e38e67" = PowerPCM native boot-ROM upload, "t43" = 6Speed.T43 read-kernel.
+    // See EcuNode.ReadFamily / ReadKernelFamily. Null / omitted -> "e38e67", so
+    // old configs load unchanged; persisted only when it differs (WhenWritingNull).
+    public string? ReadFamily { get; set; }
+
+    // Response-timing profile. ResponseDelayMs models this ECU's processing
+    // latency on every diagnostic response (0 = instant, the default). When it
+    // exceeds the active stack's P2, the ECU emits 7F sid 78 RCR-RP heartbeats to
+    // P2* unless Emit78WhenSlow is false. SessionTimeoutOverrideMs overrides the
+    // active stack's P3C/S3 session timeout. See EcuNode for the full rationale.
+    // All nullable so a default ECU stays quiet in the JSON (WhenWritingNull):
+    // absence -> ResponseDelayMs 0, Emit78WhenSlow true (so old configs keep
+    // spec-correct pending behaviour), no session-timeout override.
+    public int? ResponseDelayMs { get; set; }
+    public bool? Emit78WhenSlow { get; set; }
+    public int? SessionTimeoutOverrideMs { get; set; }
+
     public List<PidDto> Pids { get; set; } = new();
 
-    // Persona / dispatch table this ECU uses for inbound USDT requests.
-    // Null or omitted -> "gmw3110" (the default that every GM ECU starts
-    // with). "ford-uds" routes every request through FordUdsPersona,
-    // which logs and NRC-replies without consulting any Service*Handler.
-    // Resolved via PersonaRegistry on load. New field; absence in older
-    // configs is silently treated as "gmw3110".
+    // The diagnostic standard set this ECU speaks (the stack-synthesis
+    // discriminator). Null or omitted -> "gmw3110" (J1979 + GMW3110, the default
+    // every GM ECU starts with). "ford-uds" selects the Ford UDS capture stack,
+    // which logs every request and answers a whitelist. Absence in older configs
+    // is silently treated as "gmw3110".
     public string? PersonaId { get; set; }
+
+    // Protocol-stack service-allow-list overrides (DESIGN doc section 6). Each entry narrows or
+    // widens which SIDs one bound standard answers on this ECU, relative to the synthesized default.
+    // Null / omitted -> this ECU's bindings are exactly ProtocolStacks.SynthesizeFor(PersonaId +
+    // CAN ids); written only for the standards the user has customised (a delta), so standard configs
+    // stay quiet. See StackDto.
+    public List<StackDto>? Stacks { get; set; }
 
     // Optional path to a flash bin file backing Service $23 ReadMemoryByAddress
     // when PersonaId == "ford-uds". The file is loaded once at config-apply
-    // time via FordUdsPersona.LoadFlashBin(path); subsequent $23 requests
+    // time via FordUdsDispatch.LoadFlashBin(path); subsequent $23 requests
     // serve directly from those bytes. Use this so PCMTec's flash-cross-check
     // probes (VIN at 0x000100C0, etc.) can complete against the real HAEE4UY
     // contents instead of NRC-ing. Path can be absolute or relative to the
@@ -279,6 +234,20 @@ public sealed class EcuDto
     // real values. Null / omitted -> no mappings (slots fall back to EngineRpm). Only consulted by
     // the Ford UDS persona.
     public List<DmrSignalMappingDto>? DmrSignalMappings { get; set; }
+}
+
+// One per-stack entry in EcuDto.Stacks - the persistence projection of a StackBinding's enabled
+// allow-list (DESIGN doc section 6). Standard names a bound diagnostic standard ("J1979" / "GMW3110"
+// / "UDS"); Services is the allow-list of SIDs that stack answers on this ECU as hex strings
+// ("0x22"), or null/omitted for the wildcard "*" (every service the stack's catalog implements).
+// The config references services by SID only - names, NRC vocabulary and timing come from the stack
+// catalog in code at load time, never re-described here. Persisted only when the enabled set diverges
+// from the synthesized default, so a quick config carries no Stacks and an empty Services list means
+// "this stack answers nothing" (a deliberate hand-edit), distinct from null = wildcard.
+public sealed class StackDto
+{
+    public required string Standard { get; set; }
+    public List<string>? Services { get; set; }
 }
 
 // One DMR address -> engine signal mapping. Address is the 32-bit RAM address PCMTec reads via the
@@ -357,8 +326,8 @@ public sealed class PidDto
     /// <summary>
     /// Which service this row serves on the wire. See <see cref="PidMode"/>
     /// for the per-mode meaning of <see cref="Address"/>. Defaults to
-    /// <see cref="PidMode.Mode22"/> so pre-v15 configs (which had no Mode
-    /// field) load with the legacy single-mode behaviour.
+    /// <see cref="PidMode.Mode22"/> so a config without a Mode field loads
+    /// with the legacy single-mode behaviour.
     /// </summary>
     public PidMode Mode { get; set; } = PidMode.Mode22;
 
@@ -385,9 +354,9 @@ public sealed class PidDto
     // legacy waveform / static PID. Serialised as a camelCase string (e.g. "engineRpm").
     public SignalId? Signal { get; set; }
 
-    // Where the row draws its live value: "none" (reads 0), "waveform", or "signal". Null in a pre-v17 config that
-    // predates the explicit selector - ConfigStore.PidFrom then infers it (a non-null Signal -> Signal, otherwise the
-    // old null-signal-means-waveform fallback) so older files keep behaving exactly as they did. Serialised camelCase.
+    // Where the row draws its live value: "none" (reads 0), "waveform", or "signal". Null when the config predates
+    // the explicit selector - ConfigStore.PidFrom then infers it (a non-null Signal -> Signal, otherwise the old
+    // null-signal-means-waveform fallback) so such files keep behaving exactly as they did. Serialised camelCase.
     public PidValueSource? ValueSource { get; set; }
 }
 

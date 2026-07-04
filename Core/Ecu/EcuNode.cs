@@ -1,7 +1,6 @@
 using Common.Glitch;
 using Common.Protocol;
 using Common.Signals;
-using Core.Ecu.Personas;
 using Core.Security;
 using System.Text.Json;
 
@@ -20,9 +19,16 @@ namespace Core.Ecu;
 public sealed class EcuNode
 {
     public string Name { get; set; } = "";
-    public ushort PhysicalRequestCanId { get; set; }
-    public ushort UsdtResponseCanId { get; set; }
-    public ushort UudtResponseCanId { get; set; }
+
+    // The CAN ids feed protocol-stack binding synthesis, so changing one invalidates the
+    // lazily-built Stacks cache (see Stacks / RebuildStacks below). Backing fields rather than
+    // auto-props purely so the editor can re-address an ECU live and Resolve stays current.
+    private ushort physicalRequestCanId;
+    private ushort usdtResponseCanId;
+    private ushort uudtResponseCanId;
+    public ushort PhysicalRequestCanId { get => physicalRequestCanId; set { physicalRequestCanId = value; stacks = null; } }
+    public ushort UsdtResponseCanId    { get => usdtResponseCanId;    set { usdtResponseCanId = value;    stacks = null; } }
+    public ushort UudtResponseCanId    { get => uudtResponseCanId;    set { uudtResponseCanId = value;    stacks = null; } }
 
     // Set by ArchivePrimer.BuildEcuNode. Primed ECUs are live on the bus
     // during the session but are not written to ecu_config.json - they are
@@ -78,13 +84,27 @@ public sealed class EcuNode
     //   mode1APids  key = (byte)(Pid.Address & 0xFF)        GMW3110 DID
     //   mode22Pids  key = (ushort)(Pid.Address & 0xFFFF)    $22 wire PID id
     //   mode2DPids  key = Pid.Address                       full 32-bit RAM addr
+    //   mode23Pids  key = Pid.Address                       full 32-bit mem addr ($23 ReadMemoryByAddress)
     //
     // $22 wire lookup for Mode2D goes through GetPidByWireId, which derives
     // the alias 0xF000 | (addr & 0x0FFF) from each Mode2D entry's address.
+    // Mode23 rows back $23 ReadMemoryByAddress via GetMemoryReadPid (exact
+    // address match), consulted in VirtualBus before stack dispatch.
     private readonly Dictionary<byte,   Pid> mode1APids = new();
     private readonly Dictionary<ushort, Pid> mode22Pids = new();
     private readonly Dictionary<uint,   Pid> mode2DPids = new();
+    private readonly Dictionary<uint,   Pid> mode23Pids = new();
     private readonly Lock pidsLock = new();
+
+    // SAE J1979 Mode $09 RequestVehicleInformation store, keyed by InfoType id ($02 VIN, $04 CALID).
+    // This is the make-neutral backing store Service09Handler reads. It is DELIBERATELY DISTINCT from the
+    // $1A identity dictionaries above: Mode $09 is legislated OBD and is answered even by personas that do
+    // NOT implement GMW3110 $1A at all (the Ford UDS capture stack NRC/silently-drops $1A), so Mode $09
+    // cannot lean on the Mode1A store as a backing source. Seeded per-persona at config-apply
+    // (ConfigStore): Ford from the flash bin (FordUdsDispatch.SeedMode09Identity), GM by projecting its
+    // own $1A identity once (Service09Handler.SeedFromIdentity), since on real GM silicon the Mode $09
+    // VIN/CALID equal the $1A $90/$C0 identity.
+    private readonly Dictionary<byte, byte[]> mode09Info = new();
 
     // GMW3110 §8.3 ReadDataByIdentifier ($1A) data. Each DID maps to a raw
     // byte array; the service handler returns [$5A, did, ...bytes] verbatim
@@ -141,12 +161,62 @@ public sealed class EcuNode
     }
 
     // For ECUs using the ford-uds persona, the path of the flash bin
-    // loaded into FordUdsPersona at config-apply time. Stored here
+    // loaded into FordUdsDispatch at config-apply time. Stored here
     // purely so the save path (ConfigStore.EcuDtoFrom) can round-trip the
     // field back to JSON without losing it through a UI save. The persona
     // itself owns the byte array (static singleton); this is a bookkeeping
     // mirror, not a second copy of the data.
     public string? FlashBinPath { get; set; }
+
+    // ---- Flash-READ ($35/$36 upload) profile ----
+    //
+    // Which GM flash-read dialect this ECU answers on $35/$36, for the two real
+    // reader tools (PowerPCM_Flasher native upload = E38E67, 6Speed.T43 read-
+    // kernel = T43). Editable in the Advanced tab under the security-module
+    // picker (GM persona only). Default E38E67; see ReadKernelFamily.
+    public ReadKernelFamily ReadFamily { get; set; } = ReadKernelFamily.E38E67;
+
+    // Lazily-loaded, cached copy of the flash image behind a $35/$36 read,
+    // sourced from FlashBinPath. A read serves these bytes so the dumped image
+    // matches the ECU's loaded bin; addresses past the bin (or with no bin
+    // loaded) read back as 0x00. The cache is keyed on the path so a Bin
+    // Load/Clear in the editor transparently re-sources it. Guarded by
+    // flashImageLock - reads run on the IPC dispatch thread.
+    private readonly Lock flashImageLock = new();
+    private byte[]? flashImageCache;
+    private string? flashImageCachePath;
+
+    /// <summary>
+    /// Fill <paramref name="dest"/> with flash bytes starting at absolute byte
+    /// <paramref name="offset"/>, sourced from the loaded flash bin
+    /// (<see cref="FlashBinPath"/>). Bytes at or past the bin length - or any
+    /// byte when no bin is loaded / the file can't be read - come back 0x00, so
+    /// a read of an unbacked ECU still completes (a zero-filled dump) rather
+    /// than stalling the tester. Used by the $35/$36 flash-read emulation.
+    /// </summary>
+    public void CopyFlash(long offset, Span<byte> dest)
+    {
+        byte[]? image;
+        lock (flashImageLock)
+        {
+            if (!string.Equals(flashImageCachePath, FlashBinPath, StringComparison.Ordinal))
+            {
+                flashImageCachePath = FlashBinPath;
+                flashImageCache = null;
+                if (!string.IsNullOrWhiteSpace(FlashBinPath) && System.IO.File.Exists(FlashBinPath))
+                {
+                    try { flashImageCache = System.IO.File.ReadAllBytes(FlashBinPath); }
+                    catch { flashImageCache = null; }   // unreadable -> serve zeros
+                }
+            }
+            image = flashImageCache;
+        }
+
+        dest.Clear();
+        if (image is null || offset >= image.Length || offset < 0) return;
+        int avail = (int)Math.Min(dest.Length, image.Length - offset);
+        if (avail > 0) image.AsSpan((int)offset, avail).CopyTo(dest);
+    }
 
     // ---- Flash-timing profile (ford-uds flash-write path) ----
     //
@@ -176,13 +246,173 @@ public sealed class EcuNode
     // spec-correct NRC $31 behaviour, so existing configs are unchanged.
     public bool RamReadReturnsZeros { get; set; }
 
-    // The diagnostic dispatch table the ECU presents on the wire RIGHT NOW.
-    // Defaults to GMW3110-2010 (what every stock ECU spends its life speaking).
-    // Swapped to UdsKernelPersona by Service36Handler when $36 sub $80
-    // DownloadAndExecute lands; reset back by EcuExitLogic on $20 / P3C
-    // timeout. The persona is per-ECU, not per-channel: a kernel handover
-    // changes what every tester on the bus sees from this ECU.
-    public IDiagnosticPersona Persona { get; set; } = Gmw3110Persona.Instance;
+    // When true, a Ford $A1 SETUP_DMR whose 32-bit RAM address has no matching
+    // row in DmrSignalMappings (the $A1 SetupDataMode grid) is answered with
+    // NRC $31 RequestOutOfRange instead of the positive E1 echo. Consulted only
+    // by the Ford UDS dispatch (FordUdsDispatch); other personas don't serve
+    // $A1. Default false = accept any address (the capture-friendly behaviour
+    // that lets PCMTec bind slots we haven't pre-wired), so existing configs are
+    // unchanged. Tick it to model an ECU that only accepts known DMR addresses -
+    // but then every address PCMTec polls must already be in the grid or its
+    // datalog won't start.
+    public bool RejectUnmappedDmr { get; set; }
+
+    // ---- Response-timing profile (P2 / P2* / session timeout) ----
+    //
+    // ResponseDelayMs models the time THIS ECU takes to produce a diagnostic
+    // response (a real ECU answers within P2; a simulator answers instantly). 0
+    // (default) = instant, byte-identical to the historic behaviour and what
+    // every existing flow/test relies on. When set, every USDT response is
+    // deferred by this much: VirtualBus.DispatchUsdt wires it onto the node's
+    // fragmenter as a pacing hook (Core/Services/ResponseTiming). When the delay
+    // exceeds the active stack's P2, the ECU emits 7F sid 78 RCR-RP heartbeats to
+    // hold the tester's deadline open to P2* until the real response is ready
+    // (Emit78WhenSlow). The flash paths use FlashTiming instead, which bypasses
+    // the hook, so a flash response is never double-paced.
+    public int ResponseDelayMs { get; set; }
+
+    /// <summary>
+    /// Emit 7F sid 78 RequestCorrectlyReceived-ResponsePending when a response is
+    /// slower than P2 (default true, spec-correct). Set false to model an ECU that
+    /// goes quiet and answers when done - some hosts (PCMTec on the $B1 erase)
+    /// abort on a pending reply. Only consulted when <see cref="ResponseDelayMs"/>
+    /// exceeds the active stack's P2; the flash paths are always silent (FlashTiming),
+    /// so this governs only the generic response path.
+    /// </summary>
+    public bool Emit78WhenSlow { get; set; } = true;
+
+    /// <summary>
+    /// Optional per-ECU override (ms) of the diagnostic session timeout (GMW3110
+    /// P3Cnom / ISO 14229 S3). Null (default) = use the active protocol stack's
+    /// <see cref="Core.Protocol.TimingProfile.SessionTimeoutMs"/>. The
+    /// TesterPresentTicker keys the P3C/S3 expiry off <see cref="SessionTimeoutMs"/>.
+    /// </summary>
+    public int? SessionTimeoutOverrideMs { get; set; }
+
+    /// <summary>The active diagnostic session timeout (ms): the per-ECU override when
+    /// set, else the first bound stack's <see cref="Core.Protocol.TimingProfile.SessionTimeoutMs"/>,
+    /// else the GMW3110 P3Cnom default. Read by the TesterPresentTicker each tick so it
+    /// tracks the live stack (e.g. the transient SPS kernel binding).</summary>
+    public int SessionTimeoutMs =>
+        SessionTimeoutOverrideMs
+        ?? Stacks.FirstOrDefault()?.Stack.Timing.SessionTimeoutMs
+        ?? Timing.P3Cnom;
+
+    /// <summary>The application-layer <see cref="Core.Protocol.TimingProfile"/> in effect
+    /// for a request arriving on <paramref name="canId"/>: the primary bound stack on that
+    /// CAN id, falling back to the first stack, then GM timing. Drives the P2 / P2*
+    /// response pacing (VirtualBus.DispatchUsdt).</summary>
+    public Core.Protocol.TimingProfile EffectiveTiming(uint canId) =>
+        PrimaryForCanId(canId)?.Stack.Timing
+        ?? Stacks.FirstOrDefault()?.Stack.Timing
+        ?? Core.Protocol.TimingProfile.Gm;
+
+    // The standard this ECU speaks ("gmw3110" or "ford-uds") - the discriminator stack synthesis
+    // keys off (ProtocolStacks.SynthesizeFor) and config round-trips. Changing it invalidates the
+    // lazily-built Stacks cache. The SPS-kernel handover is NOT a PersonaId change: it replaces
+    // Stacks transiently via EnterKernelMode/ExitKernelMode.
+    private string personaId = "gmw3110";
+    public string PersonaId { get => personaId; set { personaId = value; stacks = null; } }
+
+    // ---- Protocol-stack bindings ----------------------------------------------------------
+    // The diagnostic standards this ECU answers, each bound to a set of CAN ids with an enabled
+    // allow-list. VirtualBus.DispatchUsdt resolves (canId, sid) -> binding through Resolve below.
+    // The baseline list is lazily synthesised from PersonaId + CAN ids (ProtocolStacks.
+    // SynthesizeFor) and cached; the PersonaId / CAN-id setters null the cache so the next access
+    // re-derives it. While an SPS kernel handover is active, kernelStacks takes precedence (see
+    // EnterKernelMode) so invalidating the baseline cache cannot disturb the kernel.
+    private IList<Core.Protocol.StackBinding>? stacks;
+    public IList<Core.Protocol.StackBinding> Stacks
+        => kernelStacks ?? (stacks ??= BuildBaselineStacks());
+
+    // Synthesize the baseline bindings (PersonaId + CAN ids), then layer any per-standard service
+    // overrides (the stacks[] config / editor checklist) on top: a binding whose Stack.Standard has
+    // an override gets its Enabled filter replaced, narrowing or widening which SIDs it answers.
+    private IList<Core.Protocol.StackBinding> BuildBaselineStacks()
+    {
+        var bindings = Core.Protocol.ProtocolStacks.SynthesizeFor(this);
+        if (serviceOverrides is { Count: > 0 })
+            for (int i = 0; i < bindings.Count; i++)
+                if (serviceOverrides.TryGetValue(bindings[i].Stack.Standard, out var filter))
+                    bindings[i] = bindings[i] with { Enabled = filter };
+        return bindings;
+    }
+
+    /// <summary>Force re-synthesis of the baseline <see cref="Stacks"/> from the current PersonaId +
+    /// CAN ids (and service overrides). (The setters already invalidate the cache; this is for
+    /// callers that mutate state the setters don't observe.)</summary>
+    public void RebuildStacks() => stacks = BuildBaselineStacks();
+
+    // ---- Per-standard service overrides (the stacks[] config / editor render-full-store-delta) ----
+    // Keyed by IProtocolStack.Standard. Absent for a standard => its binding keeps the synthesized
+    // filter (wildcard on the OBD GMW3110 / J1979 bindings; the restricted 9-SID set on a non-OBD
+    // GMW3110 binding). The editor stores ONLY the delta here and ConfigStore persists it as
+    // EcuDto.Stacks; a standard config carries no overrides and rebuilds purely from synthesis.
+    private Dictionary<string, Core.Protocol.IServiceFilter>? serviceOverrides;
+
+    /// <summary>The per-standard allow-list overrides currently in effect (the persistence delta),
+    /// or null when none are set.</summary>
+    public IReadOnlyDictionary<string, Core.Protocol.IServiceFilter>? ServiceOverrides => serviceOverrides;
+
+    /// <summary>The override filter for <paramref name="standard"/>, or null when that standard's
+    /// binding uses its synthesized default.</summary>
+    public Core.Protocol.IServiceFilter? GetServiceOverride(string standard)
+        => serviceOverrides is not null && serviceOverrides.TryGetValue(standard, out var f) ? f : null;
+
+    /// <summary>Override (or, when <paramref name="filter"/> is null, clear) the enabled-service
+    /// allow-list for the bound stack named <paramref name="standard"/>. Invalidates the baseline
+    /// Stacks cache so the next dispatch sees the change.</summary>
+    public void SetServiceOverride(string standard, Core.Protocol.IServiceFilter? filter)
+    {
+        if (filter is null)
+        {
+            serviceOverrides?.Remove(standard);
+            if (serviceOverrides is { Count: 0 }) serviceOverrides = null;
+        }
+        else
+        {
+            (serviceOverrides ??= new())[standard] = filter;
+        }
+        stacks = null;
+    }
+
+    /// <summary>The baseline bindings <see cref="Core.Protocol.ProtocolStacks.SynthesizeFor"/> would
+    /// produce for this ECU IGNORING any service overrides - the editor compares the user's ticks
+    /// against these defaults so it can persist only the delta.</summary>
+    public IList<Core.Protocol.StackBinding> SynthesizedDefaults()
+        => Core.Protocol.ProtocolStacks.SynthesizeFor(this);
+
+    /// <summary>Resolve an inbound (CAN id, SID) to the first binding that owns it, or null if no
+    /// bound stack claims the SID on that CAN id (DESIGN doc section 5).</summary>
+    public Core.Protocol.StackBinding? Resolve(uint canId, byte sid)
+        => Stacks.FirstOrDefault(b => b.Owns(canId, sid));
+
+    /// <summary>The first binding listening on <paramref name="canId"/> regardless of SID - the
+    /// stack whose serviceNotSupported NRC answers an unowned SID on physical addressing.</summary>
+    public Core.Protocol.StackBinding? PrimaryForCanId(uint canId)
+        => Stacks.FirstOrDefault(b => b.CanIds.Match(canId));
+
+    // ---- SPS kernel handover (transient stack replacement) ----
+    // $36 sub $80 DownloadAndExecute hands the bus to an uploaded SPS kernel (Service36Handler
+    // calls EnterKernelMode); $20 / P3C timeout restores the baseline (EcuExitLogic calls
+    // ExitKernelMode). The kernel binding lives in its OWN field, separate from the baseline
+    // `stacks` cache, and Stacks returns it in preference while set - so the kernel is
+    // AUTHORITATIVE (a baseline GM SID it doesn't implement NRC-$11s, matching real hardware) AND a
+    // CAN-id / PersonaId setter nulling the baseline cache mid-flash cannot demote it. On exit the
+    // baseline re-synthesises lazily, picking up any CAN-id change made meanwhile.
+    private IList<Core.Protocol.StackBinding>? kernelStacks;
+
+    /// <summary>True while an SPS kernel binding has replaced the baseline stacks.</summary>
+    public bool InKernelMode => kernelStacks is not null;
+
+    /// <summary>Replace the active stacks with the single SPS-kernel binding.</summary>
+    public void EnterKernelMode(Core.Protocol.StackBinding kernel)
+        => kernelStacks = new List<Core.Protocol.StackBinding> { kernel };
+
+    /// <summary>End a kernel handover - the baseline stacks take over again (re-synthesised lazily
+    /// on next access). No-op when not in kernel mode, so EcuExitLogic / reset paths leave a
+    /// configured (non-kernel) ECU untouched.</summary>
+    public void ExitKernelMode() => kernelStacks = null;
 
     // The chosen security module for this ECU (null = $27 returns NRC $11
     // ServiceNotSupported). Mutable so the editor can hot-swap modules at
@@ -209,10 +439,11 @@ public sealed class EcuNode
         {
             lock (pidsLock)
             {
-                var arr = new Pid[mode22Pids.Count + mode2DPids.Count + mode1APids.Count];
+                var arr = new Pid[mode22Pids.Count + mode2DPids.Count + mode23Pids.Count + mode1APids.Count];
                 int i = 0;
                 foreach (var kv in mode22Pids.OrderBy(kv => kv.Key))  arr[i++] = kv.Value;
                 foreach (var kv in mode2DPids.OrderBy(kv => kv.Key))  arr[i++] = kv.Value;
+                foreach (var kv in mode23Pids.OrderBy(kv => kv.Key))  arr[i++] = kv.Value;
                 foreach (var kv in mode1APids.OrderBy(kv => kv.Key))  arr[i++] = kv.Value;
                 return arr;
             }
@@ -253,12 +484,41 @@ public sealed class EcuNode
         }
     }
 
+    /// <summary>$23 ReadMemoryByAddress hook. Returns the Mode23 row whose
+    /// <see cref="Pid.Address"/> equals <paramref name="address"/> exactly, or
+    /// null when no row claims it (the caller falls back to the loaded flash bin
+    /// / RAM-read-zeros / stack NRC). Consulted by VirtualBus before stack
+    /// dispatch so a user-defined row wins over every other $23 source.</summary>
+    public Pid? GetMemoryReadPid(uint address)
+    {
+        lock (pidsLock) return mode23Pids.TryGetValue(address, out var p) ? p : null;
+    }
+
     /// <summary>$1A handler hook. Returns the Mode1A row for the given DID,
     /// or null - the caller falls back to <c>GetIdentifier</c> for bin/archive-
     /// seeded values that weren't overridden in the editor grid.</summary>
     public Pid? GetMode1APid(byte did)
     {
         lock (pidsLock) return mode1APids.TryGetValue(did, out var p) ? p : null;
+    }
+
+    /// <summary>$09 RequestVehicleInformation lookup. Returns the bytes backing an InfoType ($02 VIN,
+    /// $04 CALID), or null when this ECU advertises nothing for it. Read by Service09Handler; this is the
+    /// ONLY source it consults - Mode $09 never reads the $1A identity stores.</summary>
+    public byte[]? GetMode09Info(byte infoType)
+    {
+        lock (pidsLock) return mode09Info.TryGetValue(infoType, out var v) ? v : null;
+    }
+
+    /// <summary>Set (or replace) the bytes backing a Mode $09 InfoType. An empty span clears the entry so
+    /// the InfoType reports unsupported. Seeded at config-apply by the per-persona Mode $09 seeders.</summary>
+    public void SetMode09Info(byte infoType, ReadOnlySpan<byte> data)
+    {
+        lock (pidsLock)
+        {
+            if (data.IsEmpty) mode09Info.Remove(infoType);
+            else mode09Info[infoType] = data.ToArray();
+        }
     }
 
     /// <summary>Insert or replace a PID. Routes to the per-mode store based on
@@ -276,6 +536,7 @@ public sealed class EcuNode
                 case PidMode.Mode1A: mode1APids[(byte)(pid.Address & 0xFF)]    = pid; break;
                 case PidMode.Mode22: mode22Pids[(ushort)(pid.Address & 0xFFFF)] = pid; break;
                 case PidMode.Mode2D: mode2DPids[pid.Address]                    = pid; break;
+                case PidMode.Mode23: mode23Pids[pid.Address]                    = pid; break;
             }
         }
         PidsChanged?.Invoke(this, EventArgs.Empty);
@@ -294,6 +555,7 @@ public sealed class EcuNode
                 PidMode.Mode1A  => mode1APids.Remove((byte)(pid.Address & 0xFF)),
                 PidMode.Mode22  => mode22Pids.Remove((ushort)(pid.Address & 0xFFFF)),
                 PidMode.Mode2D  => mode2DPids.Remove(pid.Address),
+                PidMode.Mode23  => mode23Pids.Remove(pid.Address),
                 _               => false,
             };
         }
@@ -313,6 +575,7 @@ public sealed class EcuNode
         {
             if (address <= 0xFFFF && mode22Pids.Remove((ushort)address)) removed = true;
             if (mode2DPids.Remove(address))                              removed = true;
+            if (mode23Pids.Remove(address))                              removed = true;
             if (address <= 0xFF   && mode1APids.Remove((byte)address))   removed = true;
         }
         if (removed)
@@ -336,12 +599,14 @@ public sealed class EcuNode
                 case PidMode.Mode1A: mode1APids.Remove((byte)(pid.Address & 0xFF));    break;
                 case PidMode.Mode22: mode22Pids.Remove((ushort)(pid.Address & 0xFFFF)); break;
                 case PidMode.Mode2D: mode2DPids.Remove(pid.Address);                    break;
+                case PidMode.Mode23: mode23Pids.Remove(pid.Address);                    break;
             }
             switch (pid.Mode)
             {
                 case PidMode.Mode1A: mode1APids[(byte)(pid.Address & 0xFF)]    = pid; break;
                 case PidMode.Mode22: mode22Pids[(ushort)(pid.Address & 0xFFFF)] = pid; break;
                 case PidMode.Mode2D: mode2DPids[pid.Address]                    = pid; break;
+                case PidMode.Mode23: mode23Pids[pid.Address]                    = pid; break;
             }
         }
         PidsChanged?.Invoke(this, EventArgs.Empty);
@@ -369,6 +634,10 @@ public sealed class EcuNode
                 case PidMode.Mode2D:
                     mode2DPids.Remove(oldAddress);
                     mode2DPids[pid.Address] = pid;
+                    break;
+                case PidMode.Mode23:
+                    mode23Pids.Remove(oldAddress);
+                    mode23Pids[pid.Address] = pid;
                     break;
             }
         }
@@ -423,7 +692,7 @@ public sealed class EcuNode
     public void RaiseBroadcastsChanged() => BroadcastsChanged?.Invoke(this, EventArgs.Empty);
 
     // ---- DMR address -> engine signal map (Ford persona only) -----------------------------------
-    // Pre-wired map from a DMR RAM address to a live engine SignalId, used by FordUdsPersona's
+    // Pre-wired map from a DMR RAM address to a live engine SignalId, used by FordUdsDispatch's
     // 0x6A0 broadcast loop to drive each datalog slot's value. Lock-guarded with a change event,
     // mirroring the broadcast/PID stores. Only the Ford UDS persona consults it.
     private readonly List<DmrSignalMapping> dmrSignalMappings = new();

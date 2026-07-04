@@ -1,6 +1,6 @@
 namespace Common.Protocol;
 
-// PID engineering data types — controls how raw bytes are interpreted/encoded
+// PID engineering data types - controls how raw bytes are interpreted/encoded
 // when the simulator returns a sample (big-endian on the wire per GMLAN).
 public enum PidDataType
 {

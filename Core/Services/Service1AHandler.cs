@@ -16,13 +16,13 @@ namespace Core.Services;
 //   bytes[2..] = identifier value (length defined per-DID by the spec)
 //
 // Negative responses (§8.3.5.2):
-//   $7F 1A 12   SubFunctionNotSupported-InvalidFormat — request length != 2
-//   $7F 1A 31   RequestOutOfRange — DID is not configured on this ECU
+//   $7F 1A 12   SubFunctionNotSupported-InvalidFormat - request length != 2
+//   $7F 1A 31   RequestOutOfRange - DID is not configured on this ECU
 //
 // Addressing: real GM dealer tools (DPS, TIS2WEB) issue a *functional broadcast*
 // $1A $B0 to enumerate ECUs - the canonical "who's on the bus" probe documented
 // on page 241 of the DPS Programmers Reference Manual:
-//   "$101 $FE ... $1A $B0 — All nodes — Read Databyte Identifier $B0 —
+//   "$101 $FE ... $1A $B0 - All nodes - Read Databyte Identifier $B0 -
 //    Return ECU Diagnostic Address"
 // Every programmable ECU must answer on its physical USDT response ID with
 // "5A B0 <diag_addr>". This handler honours that by treating DID $B0 as a SPEC

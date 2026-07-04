@@ -5,7 +5,7 @@ using Core.Utilities;
 
 namespace Core.Services;
 
-// Shared flash-write response pacing for every persona. A simulator answers
+// Shared flash-write response pacing for every ECU. A simulator answers
 // instantly, so a flash completes in well under 10 s; a real PCM takes 30 s+.
 // The two per-ECU knobs (EcuNode.FlashTransferDelayMs / FlashEraseDelayMs) let
 // any flash path model realistic timing by simply DEFERRING the positive
@@ -51,9 +51,12 @@ public static class FlashTiming
 
     private static void EnqueueDelayed(EcuNode node, ChannelSession ch, byte[] payload, int delayMs)
     {
+        // SendNow, not EnqueueResponse: flash pacing is self-contained, so it must
+        // bypass the node's generic response-pacing hook (ResponseDelayMs / 78)
+        // or a flash reply would be deferred twice and could grow an unwanted 78.
         if (delayMs <= 0)
         {
-            node.State.Fragmenter.EnqueueResponse(ch, node.UsdtResponseCanId, payload);
+            node.State.Fragmenter.SendNow(ch, node.UsdtResponseCanId, payload);
             return;
         }
 
@@ -67,7 +70,7 @@ public static class FlashTiming
         };
         timer.OnTimingDone += (_, _) =>
         {
-            try { node.State.Fragmenter.EnqueueResponse(ch, node.UsdtResponseCanId, payload); }
+            try { node.State.Fragmenter.SendNow(ch, node.UsdtResponseCanId, payload); }
             catch (Exception ex)
             {
                 ch.Bus?.LogSim?.Invoke($"[flash-timing] delayed response error: {ex.Message}");

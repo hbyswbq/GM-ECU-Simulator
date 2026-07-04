@@ -20,6 +20,7 @@ public static class Service
     public const byte DynamicallyDefineMessage = 0x2C;        // $2C - DPID definition
     public const byte DefinePidByAddress = 0x2D;              // $2D - PID by memory address
     public const byte RequestDownload = 0x34;                 // $34 - prepare for module programming (§8.12)
+    public const byte RequestUpload = 0x35;                   // $35 - prepare to READ memory out of the ECU (§8.12 counterpart); used by PowerPCM_Flasher (native boot-ROM upload) and the 6Speed.T43 read-kernel
     public const byte TransferData = 0x36;                    // $36 - download/execute block (§8.13)
     public const byte WriteDataByIdentifier = 0x3B;           // $3B - write static DID (§8.14, Appendix D Pt 2 $11/$12/$13)
     public const byte TesterPresent = 0x3E;                   // $3E - keepalive
@@ -38,6 +39,8 @@ public static class Service
     public const byte RequestVehicleInformation = 0x09;       // $09 - SAE J1979 OBD-II Mode 09 (VIN/CalID/CVN)
     public const byte EcuReset = 0x11;                        // $11 - UDS ECUReset
     public const byte ReadMemoryByAddress = 0x23;             // $23 - UDS ReadMemoryByAddress (Ford: 23 <4B addr><2B len>, no ALFI)
+    public const byte FordSetupDmr = 0xA1;                    // $A1 - Ford SETUP_DMR (A1 <idx> <mode> <4B addr>), resp E1 <idx>
+    public const byte FordReadDmr = 0xA0;                     // $A0 - Ford DMR read / start rapid-packet stream (A0 <slot>), resp E0 <slot>
     public const byte FordReadBlock = 0xB1;                   // $B1 - Ford ReadBlock / flash-erase command
 
     // Positive response = request + 0x40
@@ -85,7 +88,8 @@ public enum PciType : byte
 // GMW3110-2010 application timing parameters (§6.2).
 public static class Timing
 {
-    public const int P2CT = 150;          // tester USDT response timeout (ms)
+    public const int P2CE = 100;          // ECU response budget, max (ms) - §6.2.1.1 Table 27 (P2CE)
+    public const int P2CT = 150;          // tester USDT response timeout (ms) - §6.2.1.2 Table 28 (P2CT)
     public const int P2CT_Star = 5100;    // extended timeout after RC_$78 (ms)
     public const int P3Cnom = 5000;       // ECU TesterPresent timeout, nominal (ms)
     public const int P3Cmax = 5100;       // ECU TesterPresent timeout, max (ms)

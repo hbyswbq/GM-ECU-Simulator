@@ -37,6 +37,7 @@ public sealed class PidColumnFilter : NotifyPropertyChangedBase
 
         SortAscendingCommand = new RelayCommand(() => RunSort(ListSortDirection.Ascending));
         SortDescendingCommand = new RelayCommand(() => RunSort(ListSortDirection.Descending));
+        ToggleSortCommand = new RelayCommand(RunToggleSort);
         ClearSortCommand = new RelayCommand(RunClearSort);
         ClearFilterCommand = new RelayCommand(() => FilterText = string.Empty);
     }
@@ -112,6 +113,7 @@ public sealed class PidColumnFilter : NotifyPropertyChangedBase
 
     public ICommand SortAscendingCommand { get; }
     public ICommand SortDescendingCommand { get; }
+    public ICommand ToggleSortCommand { get; }
     public ICommand ClearSortCommand { get; }
     public ICommand ClearFilterCommand { get; }
 
@@ -130,6 +132,17 @@ public sealed class PidColumnFilter : NotifyPropertyChangedBase
     {
         sort(this, direction);
         IsOpen = false;
+    }
+
+    // Double-clicking the header toggles this column's sort between ascending and descending. A column not yet in the
+    // sort starts ascending; thereafter each toggle flips the direction. Promotes the column to the primary sort key
+    // (same path SortAscending/Descending take), so repeated double-clicks just reverse the order in place.
+    private void RunToggleSort()
+    {
+        var next = sortDirection == ListSortDirection.Ascending
+            ? ListSortDirection.Descending
+            : ListSortDirection.Ascending;
+        RunSort(next);
     }
 
     private void RunClearSort()

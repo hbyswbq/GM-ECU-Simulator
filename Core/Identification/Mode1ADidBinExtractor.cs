@@ -602,8 +602,12 @@ public static class Mode1ADidBinExtractor
             // We can identify them statically but can't read the value - the
             // RAM contents are populated at boot from NVM, not from a fixed
             // flash literal. Report the resolved RAM address in the note so
-            // downstream tooling has something to display.
-            if (dataAddr >= d.Length || dataAddr < 0)
+            // downstream tooling has something to display. The `+ 4` covers the
+            // read width below: a dataAddr within 3 bytes of EOF (possible on a
+            // truncated/corrupt bin, since dataAddr is data-derived from the
+            // image's own lis/addi immediates) would otherwise pass this guard
+            // and over-read in d.AsSpan(dataAddr, 4), throwing on a live UI path.
+            if (dataAddr < 0 || dataAddr + 4 > d.Length)
             {
                 return new DidExtraction(did, DidSourceKind.RuntimeComputed,
                     FlashAddress: null, WireBytes: Array.Empty<byte>(),

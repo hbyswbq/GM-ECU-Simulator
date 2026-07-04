@@ -37,7 +37,7 @@ public sealed class HexUShortConverter : JsonConverter<ushort>
 
 // 32-bit hex converter for PID addresses, which can be full memory
 // addresses (e.g. 0x002C0000). Same parse contract as the ushort variant
-// — accepts "0x..." / "...h" / decimal — and emits leading-zero padding
+// - accepts "0x..." / "...h" / decimal - and emits leading-zero padding
 // at the natural width: 4 hex digits for ≤0xFFFF, 8 hex digits otherwise.
 public sealed class HexUIntConverter : JsonConverter<uint>
 {

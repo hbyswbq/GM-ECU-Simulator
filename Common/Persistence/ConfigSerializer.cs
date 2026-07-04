@@ -28,11 +28,12 @@ public static class ConfigSerializer
     {
         var cfg = JsonSerializer.Deserialize<SimulatorConfig>(json, Options)
                   ?? throw new InvalidDataException("Config JSON deserialised to null");
-        if (cfg.Version < SimulatorConfig.MinSupportedVersion
-            || cfg.Version > SimulatorConfig.CurrentVersion)
+        // Forward-compat guard only: refuse a file written by a newer build than this one knows.
+        // There is no back-version migration - v1 is the baseline.
+        if (cfg.Version > SimulatorConfig.CurrentVersion)
             throw new InvalidDataException(
                 $"Config version not supported: file={cfg.Version}, "
-                + $"supported range={SimulatorConfig.MinSupportedVersion}..{SimulatorConfig.CurrentVersion}");
+                + $"newest known={SimulatorConfig.CurrentVersion}");
         return cfg;
     }
 }

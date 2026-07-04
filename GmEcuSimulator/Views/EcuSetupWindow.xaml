@@ -127,7 +127,8 @@
             <Grid Background="Transparent"
                   HorizontalAlignment="Stretch"
                   MouseRightButtonUp="OnColumnHeaderRightClick"
-                  ToolTip="Right-click to sort or filter this column.">
+                  MouseLeftButtonDown="OnColumnHeaderLeftClick"
+                  ToolTip="Double-click to sort (toggles ascending/descending); right-click to sort or filter this column.">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
@@ -712,76 +713,6 @@
                                 </DockPanel>
                             </Expander>
 
-                            <!-- DMR signal map. Ford UDS persona only: wires each DMR RAM address PCMTec
-                                 binds via $A1 to a live engine signal so the 0x6A0 datalog stream carries
-                                 real values. Hidden for non-Ford ECUs. -->
-                            <Expander Header="DMR Signal Map" HeaderTemplate="{StaticResource ModeSectionHeader}"
-                                      IsExpanded="False" Margin="0,0,0,10"
-                                      Visibility="{Binding IsFordUdsPersona, Converter={StaticResource BoolToVis}}">
-                                <DockPanel>
-                                    <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Opacity="0.7" Margin="0,0,0,6"
-                                               Text="Map a DMR RAM address (the value PCMTec reads back during a datalog) to an engine-simulator signal. The Ford persona writes the mapped signal as a big-endian float into that slot's 0x6A0 stream; unmapped addresses default to Engine RPM."/>
-                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal"
-                                                HorizontalAlignment="Right" Margin="0,0,0,6">
-                                        <Button Width="30" Height="26" Padding="0" Margin="0,0,6,0"
-                                                Command="{Binding AddDmrMappingCommand}"
-                                                ToolTip="Add a DMR address -> signal mapping.">
-                                            <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="14"
-                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Button>
-                                        <Button Width="30" Height="26" Padding="0"
-                                                Command="{Binding RemoveDmrMappingCommand}"
-                                                ToolTip="Remove the selected mapping.">
-                                            <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="14"
-                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Button>
-                                    </StackPanel>
-
-                                    <DataGrid ItemsSource="{Binding DmrSignalMappings}"
-                                              SelectedItem="{Binding SelectedDmrMapping}"
-                                              AutoGenerateColumns="False"
-                                              CanUserAddRows="False"
-                                              CanUserDeleteRows="False"
-                                              CanUserSortColumns="False"
-                                              FontSize="14"
-                                              HeadersVisibility="Column"
-                                              GridLinesVisibility="Horizontal"
-                                              MaxHeight="320">
-                                        <DataGrid.Columns>
-                                            <DataGridTextColumn Header="DMR Address" Width="120"
-                                                                Binding="{Binding AddressHex, UpdateSourceTrigger=LostFocus}"
-                                                                FontFamily="{StaticResource Font.Mono}"/>
-                                            <DataGridTextColumn Header="Name" Width="*" MinWidth="90"
-                                                                Binding="{Binding Name, UpdateSourceTrigger=LostFocus}"/>
-                                            <DataGridTemplateColumn Header="Engine Signal" Width="180">
-                                                <DataGridTemplateColumn.CellTemplate>
-                                                    <DataTemplate>
-                                                        <ComboBox ItemsSource="{Binding SignalOptions}"
-                                                                  DisplayMemberPath="Name"
-                                                                  SelectedItem="{Binding SelectedSignal, UpdateSourceTrigger=PropertyChanged}"
-                                                                  BorderThickness="0" Background="Transparent"
-                                                                  VerticalAlignment="Center"/>
-                                                    </DataTemplate>
-                                                </DataGridTemplateColumn.CellTemplate>
-                                            </DataGridTemplateColumn>
-                                            <DataGridTemplateColumn Header="Encoding" Width="110">
-                                                <DataGridTemplateColumn.CellTemplate>
-                                                    <DataTemplate>
-                                                        <ComboBox ItemsSource="{Binding EncodingOptions}"
-                                                                  SelectedItem="{Binding SelectedEncoding, UpdateSourceTrigger=PropertyChanged}"
-                                                                  BorderThickness="0" Background="Transparent"
-                                                                  VerticalAlignment="Center"/>
-                                                    </DataTemplate>
-                                                </DataGridTemplateColumn.CellTemplate>
-                                            </DataGridTemplateColumn>
-                                            <DataGridTextColumn Header="Scale" Width="70"
-                                                                Binding="{Binding Scale, StringFormat=G, UpdateSourceTrigger=LostFocus}"/>
-                                            <DataGridTextColumn Header="Offset" Width="70"
-                                                                Binding="{Binding Offset, StringFormat=G, UpdateSourceTrigger=LostFocus}"/>
-                                        </DataGrid.Columns>
-                                    </DataGrid>
-                                </DockPanel>
-                            </Expander>
                             <Border Style="{StaticResource SectionDivider}"/>
 
                             <!-- Group header for the diagnostic PID modes. The Save / Load PIDs buttons act on
@@ -883,8 +814,9 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <!-- Divider above each editable section separates it from the one above
-                                             ($01 from $1A, $1A from $22, $22 from $2D). -->
-                                        <StackPanel>
+                                             ($01 from $1A, $1A from $22, $22 from $2D). The whole section collapses
+                                             when its mode doesn't apply to the ECU's persona (Ford hides $1A / $2D). -->
+                                        <StackPanel Visibility="{Binding IsVisible, Converter={StaticResource BoolToVis}}">
                                             <Border Style="{StaticResource SectionDivider}"/>
                                             <Expander Header="{Binding Title}" HeaderTemplate="{StaticResource ModeSectionHeader}"
                                                       IsExpanded="False" Margin="0,0,0,10">
@@ -1066,6 +998,83 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+
+                            <!-- $A1 SetupDataMode signal map. Ford UDS persona only, placed after $22 since it's the
+                                 Ford live-datalog table (not a PID mode): each row maps a RAM address PCMTec binds via
+                                 $A1 SETUP_DMR to a live engine signal, so the $A0-triggered 0x6A0 datalog stream carries
+                                 real values. Hidden for non-Ford ECUs. -->
+                            <Border Style="{StaticResource SectionDivider}"/>
+                            <Expander Header="$A1 (SetupDataMode)" HeaderTemplate="{StaticResource ModeSectionHeader}"
+                                      IsExpanded="False" Margin="0,0,0,10"
+                                      Visibility="{Binding IsFordUdsPersona, Converter={StaticResource BoolToVis}}">
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Opacity="0.7" Margin="0,0,0,6"
+                                               Text="Map a DMR RAM address (the value PCMTec reads back during a datalog) to an engine-simulator signal. The Ford persona writes the mapped signal as a big-endian float into that slot's 0x6A0 stream; unmapped addresses default to Engine RPM."/>
+                                    <CheckBox DockPanel.Dock="Top" Margin="0,0,0,6"
+                                              Content="Reject $A1 for addresses not in this grid (NRC $31)"
+                                              IsChecked="{Binding RejectUnmappedDmr}"
+                                              ToolTip="When ticked, a $A1 SETUP_DMR whose RAM address has no row above is answered with NRC $31 RequestOutOfRange instead of binding the slot. Default off (accept any address) keeps PCMTec's datalog progressing; tick only if every address PCMTec polls is already mapped here, or its datalog won't start."/>
+                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal"
+                                                HorizontalAlignment="Right" Margin="0,0,0,6">
+                                        <Button Width="30" Height="26" Padding="0" Margin="0,0,6,0"
+                                                Command="{Binding AddDmrMappingCommand}"
+                                                ToolTip="Add a DMR address -> signal mapping.">
+                                            <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Button>
+                                        <Button Width="30" Height="26" Padding="0"
+                                                Command="{Binding RemoveDmrMappingCommand}"
+                                                ToolTip="Remove the selected mapping.">
+                                            <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Button>
+                                    </StackPanel>
+
+                                    <DataGrid ItemsSource="{Binding DmrSignalMappings}"
+                                              SelectedItem="{Binding SelectedDmrMapping}"
+                                              AutoGenerateColumns="False"
+                                              CanUserAddRows="False"
+                                              CanUserDeleteRows="False"
+                                              CanUserSortColumns="False"
+                                              FontSize="14"
+                                              HeadersVisibility="Column"
+                                              GridLinesVisibility="Horizontal"
+                                              MaxHeight="320">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="DMR Address" Width="120"
+                                                                Binding="{Binding AddressHex, UpdateSourceTrigger=LostFocus}"
+                                                                FontFamily="{StaticResource Font.Mono}"/>
+                                            <DataGridTextColumn Header="Name" Width="*" MinWidth="90"
+                                                                Binding="{Binding Name, UpdateSourceTrigger=LostFocus}"/>
+                                            <DataGridTemplateColumn Header="Engine Signal" Width="180">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <ComboBox ItemsSource="{Binding SignalOptions}"
+                                                                  DisplayMemberPath="Name"
+                                                                  SelectedItem="{Binding SelectedSignal, UpdateSourceTrigger=PropertyChanged}"
+                                                                  BorderThickness="0" Background="Transparent"
+                                                                  VerticalAlignment="Center"/>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                            <DataGridTemplateColumn Header="Encoding" Width="110">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <ComboBox ItemsSource="{Binding EncodingOptions}"
+                                                                  SelectedItem="{Binding SelectedEncoding, UpdateSourceTrigger=PropertyChanged}"
+                                                                  BorderThickness="0" Background="Transparent"
+                                                                  VerticalAlignment="Center"/>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                            <DataGridTextColumn Header="Scale" Width="70"
+                                                                Binding="{Binding Scale, StringFormat=G, UpdateSourceTrigger=LostFocus}"/>
+                                            <DataGridTextColumn Header="Offset" Width="70"
+                                                                Binding="{Binding Offset, StringFormat=G, UpdateSourceTrigger=LostFocus}"/>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </DockPanel>
+                            </Expander>
                         </StackPanel>
                     </ScrollViewer>
                 </DockPanel>
@@ -1231,6 +1240,13 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
                             <!-- ISO 15765-2 FlowControl BlockSize. The ECU
@@ -1249,14 +1265,14 @@
                                      FontFamily="{StaticResource Font.Mono}"
                                      ToolTip="ISO 15765-2 FlowControl BlockSize emitted on First Frame reception. 0x00 = unrestricted; 0x01 = one Consecutive Frame per FC cycle (needed by some testers, e.g. 6Speed.T43)."/>
 
-                            <!-- Persona (diagnostic dispatch table) picker for
-                                 THIS ECU. "GM Gen 4" = the GMW3110 stack;
-                                 "Ford" = the Ford UDS (PCMTec) dispatcher.
-                                 Binds EcuViewModel.SelectedPersonaOption, which
-                                 swaps Model.Persona on this ECU only and resets
-                                 its security state - it does NOT touch the other
-                                 ECUs on the bus. Persisted per-ECU via
-                                 ConfigSchema.PidDto.PersonaId. -->
+                            <!-- Diagnostic standard picker for THIS ECU.
+                                 "GM Gen 4" = J1979 + GMW3110; "Ford" = the Ford
+                                 UDS (PCMTec) capture stack. Binds
+                                 EcuViewModel.SelectedPersonaOption, which changes
+                                 Model.PersonaId on this ECU only (re-synthesising
+                                 its protocol-stack bindings) and resets its
+                                 security state - it does NOT touch the other ECUs
+                                 on the bus. Persisted per-ECU via EcuDto.PersonaId. -->
                             <Label Style="{StaticResource Label.FormPair}"
                                    Grid.Row="1" Grid.Column="0" Content="Persona"/>
                             <ComboBox Grid.Row="1" Grid.Column="1" Margin="0,2"
@@ -1283,9 +1299,27 @@
                                       FontFamily="{StaticResource Font.Mono}"
                                       ToolTip="Seed/key algorithm for this ECU. (none) makes $27 return NRC $11. Picking an entry rebuilds the security module and clears any prior unlock / lockout state."/>
 
+                            <!-- $35/$36 flash-READ dialect picker for THIS ECU. GM persona only
+                                 (hidden for Ford). "E38 / E67" answers PowerPCM_Flasher's native
+                                 $35 RequestUpload + $36 upload; "T43" answers the 6Speed.T43
+                                 read-kernel ($99 handshake + $35 multi-frame blocks). Binds
+                                 EcuViewModel.SelectedReadFamily -> Model.ReadFamily; a plain config
+                                 knob (no security / dispatch reset). Persisted via EcuDto.ReadFamily.
+                                 Both cells collapse under the Ford persona so no empty row shows. -->
+                            <Label Style="{StaticResource Label.FormPair}"
+                                   Grid.Row="3" Grid.Column="0" Content="Read as"
+                                   Visibility="{Binding IsGmPersona, Converter={StaticResource BoolToVis}}"/>
+                            <ComboBox Grid.Row="3" Grid.Column="1" Margin="0,2"
+                                      Height="{Binding ActualHeight, ElementName=AdvancedFcBsTextBox}"
+                                      Visibility="{Binding IsGmPersona, Converter={StaticResource BoolToVis}}"
+                                      ItemsSource="{Binding AvailableReadFamilies}"
+                                      SelectedItem="{Binding SelectedReadFamily}"
+                                      DisplayMemberPath="Label"
+                                      ToolTip="Which flash-READ protocol this ECU answers on $35/$36. E38 / E67 = PowerPCM_Flasher native upload; T43 = the 6Speed.T43 read-kernel ($99 handshake + $35 multi-frame blocks). Applies to this ECU only."/>
+
                             <!-- Divider splitting the diagnostic-stack knobs above from the Bin sub-section
                                  below. Spans both columns; extra top margin opens a gap from the Sec module row. -->
-                            <Border Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
+                            <Border Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2"
                                     Style="{StaticResource SectionDivider}" Margin="0,16,0,10"/>
 
                             <!-- Bin sub-section header with its Load / Clear actions parked top-right, mirroring
@@ -1294,7 +1328,7 @@
                                  The bin is both this ECU's identity source (the picker inspects the readback and
                                  prompts before overwriting placeholder VIN / part numbers) and its flash source
                                  (Service $23 reads, ford-uds persona). -->
-                            <Grid Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2">
+                            <Grid Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
@@ -1320,7 +1354,7 @@
 
                             <!-- Loaded-bin filename, full width across both columns. Read-only; the full path
                                  sits in the tooltip since the display value is the filename only. -->
-                            <TextBox Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,8,0,2"
+                            <TextBox Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,8,0,2"
                                      IsReadOnly="True"
                                      Text="{Binding BinFileDisplay, Mode=OneWay}"
                                      ToolTip="{Binding FlashBinPath}"
@@ -1332,35 +1366,110 @@
                                  <10 s); a real PCM takes 30 s+. These let any persona model realistic
                                  timing. Both default 0 = instant. Honoured by every flash path
                                  (Ford UDS $B1/$36 and GM SPS $31/$36). -->
-                            <Border Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2"
+                            <Border Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="2"
                                     Style="{StaticResource SectionDivider}" Margin="0,16,0,10"/>
 
                             <Label Style="{StaticResource Label.FormPair}"
-                                   Grid.Row="7" Grid.Column="0" Content="Xfer ms"/>
+                                   Grid.Row="8" Grid.Column="0" Content="Xfer ms"/>
                             <TextBox x:Name="AdvancedFlashXferTextBox"
-                                     Grid.Row="7" Grid.Column="1" Margin="0,2"
+                                     Grid.Row="8" Grid.Column="1" Margin="0,2"
                                      Text="{Binding FlashTransferDelayMs, UpdateSourceTrigger=LostFocus}"
                                      FontFamily="{StaticResource Font.Mono}"
                                      ToolTip="Per-block delay (ms) before each $36 TransferData reply, to model real flash-program time. 0 = instant. ~30 ms over ~960 blocks gives a ~30 s write. Keep under ~2 s or the tester read-times-out."/>
 
                             <Label Style="{StaticResource Label.FormPair}"
-                                   Grid.Row="8" Grid.Column="0" Content="Erase ms"/>
-                            <TextBox Grid.Row="8" Grid.Column="1" Margin="0,2"
+                                   Grid.Row="9" Grid.Column="0" Content="Erase ms"/>
+                            <TextBox Grid.Row="9" Grid.Column="1" Margin="0,2"
                                      Text="{Binding FlashEraseDelayMs, UpdateSourceTrigger=LostFocus}"
                                      FontFamily="{StaticResource Font.Mono}"
                                      ToolTip="Modelled erase time (ms). The erase positive response is simply deferred by this much - the ECU goes quiet then answers when done (no ResponsePending; PCMTec rejects a pending reply to the $B1 erase). 0 = instant."/>
+
+                            <!-- Response-timing knobs. Resp ms models the time THIS ECU
+                                 takes to answer (0 = instant). When it exceeds the active
+                                 stack's P2 (GM 150 ms / UDS 50 ms) the ECU emits 7F sid 78
+                                 ResponsePending heartbeats to P2* until it answers, unless
+                                 the 78 checkbox is cleared. Sess ms overrides the P3C/S3
+                                 session timeout (0 = the stack default). -->
+                            <Border Grid.Row="10" Grid.Column="0" Grid.ColumnSpan="2"
+                                    Style="{StaticResource SectionDivider}" Margin="0,16,0,10"/>
+
+                            <Label Style="{StaticResource Label.FormPair}"
+                                   Grid.Row="11" Grid.Column="0" Content="Resp ms"/>
+                            <TextBox Grid.Row="11" Grid.Column="1" Margin="0,2"
+                                     Text="{Binding ResponseDelayMs, UpdateSourceTrigger=LostFocus}"
+                                     FontFamily="{StaticResource Font.Mono}"
+                                     ToolTip="Modelled processing time (ms) before every diagnostic response. 0 = instant. Above the active stack's P2 (GMW3110 150 ms / UDS 50 ms) the ECU emits 7F sid 78 ResponsePending heartbeats to P2* until it answers."/>
+
+                            <Label Style="{StaticResource Label.FormPair}"
+                                   Grid.Row="12" Grid.Column="0" Content="Sess ms"/>
+                            <TextBox Grid.Row="12" Grid.Column="1" Margin="0,2"
+                                     Text="{Binding SessionTimeoutOverrideMs, UpdateSourceTrigger=LostFocus}"
+                                     FontFamily="{StaticResource Font.Mono}"
+                                     ToolTip="Override (ms) for the diagnostic session (P3C / S3) timeout. 0 = use the active stack's default (GMW3110 P3Cnom 5000 ms / UDS S3 5000 ms)."/>
+
+                            <CheckBox Grid.Row="13" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,2"
+                                      Content="Emit 78 ResponsePending when slow"
+                                      IsChecked="{Binding Emit78WhenSlow}"
+                                      ToolTip="When ticked (default), a response slower than P2 is preceded by 7F sid 78 RequestCorrectlyReceived-ResponsePending to hold the tester open to P2*. Untick to model an ECU that just goes quiet then answers - some hosts reject a pending reply (e.g. PCMTec on the $B1 erase)."/>
 
                             <!-- RAM-read fallback. When ticked, a $23 ReadMemoryByAddress that
                                  targets an address beyond the loaded bin (RAM) is answered with a
                                  positive zero-filled response instead of NRC $31 RequestOutOfRange.
                                  Applies to every persona; in-bin reads still serve the real bytes. -->
-                            <Border Grid.Row="9" Grid.Column="0" Grid.ColumnSpan="2"
+                            <Border Grid.Row="14" Grid.Column="0" Grid.ColumnSpan="2"
                                     Style="{StaticResource SectionDivider}" Margin="0,16,0,10"/>
 
-                            <CheckBox Grid.Row="10" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,2"
+                            <CheckBox Grid.Row="15" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,2"
                                       Content="Answer RAM reads with zeros"
                                       IsChecked="{Binding RamReadReturnsZeros}"
                                       ToolTip="When ticked, a $23 ReadMemoryByAddress for an address past the loaded bin's length (RAM) returns a positive response padded with 0x00 bytes instead of NRC $31 RequestOutOfRange. Applies to every persona; addresses inside the bin still read the real bytes."/>
+
+                            <!-- Per-stack diagnostic-service checklist. Renders the FULL gospel
+                                 service catalogue for each diagnostic standard this ECU binds
+                                 (J1979 + GMW3110 for GM, the catch-all UDS stack for Ford), with
+                                 a tick per service. Unticking a service drops it from that
+                                 stack's allow-list so the ECU NRC-$11s it - this is how
+                                 real-silicon fidelity like "the enhanced dispatcher doesn't
+                                 answer $2C" is modelled. Only the delta off the synthesized
+                                 default is persisted (EcuDto.Stacks). -->
+                            <Border Grid.Row="16" Grid.Column="0" Grid.ColumnSpan="2"
+                                    Style="{StaticResource SectionDivider}" Margin="0,16,0,10"/>
+
+                            <StackPanel Grid.Row="17" Grid.Column="0" Grid.ColumnSpan="2">
+                                <TextBlock Text="Diagnostic services"
+                                           Foreground="{DynamicResource Text.PrimaryBrush}"
+                                           FontWeight="SemiBold" FontSize="15"/>
+                                <TextBlock Text="Which SIDs each bound standard answers on this ECU. Untick to make it NRC $11 (ServiceNotSupported). Only the delta off the default is saved."
+                                           Style="{StaticResource Hint14}" Margin="0,2,0,6"
+                                           TextWrapping="Wrap"/>
+                                <ItemsControl ItemsSource="{Binding DiagnosticStacks}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Margin="0,6,0,0">
+                                                <TextBlock Text="{Binding Header}"
+                                                           Foreground="{DynamicResource Text.PrimaryBrush}"
+                                                           FontWeight="SemiBold"
+                                                           FontFamily="{StaticResource Font.Mono}"/>
+                                                <TextBlock Text="{Binding Note}"
+                                                           Style="{StaticResource Hint14}"
+                                                           TextWrapping="Wrap" Margin="0,2,0,0"
+                                                           Visibility="{Binding ShowsNote, Converter={StaticResource BoolToVis}}"/>
+                                                <ItemsControl ItemsSource="{Binding Services}" Margin="6,2,0,0">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <CheckBox Margin="0,1"
+                                                                      IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                                                                      Content="{Binding Display}"
+                                                                      ToolTip="{Binding Name}"
+                                                                      FontFamily="{StaticResource Font.Mono}"/>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
                         </Grid>
                     </ScrollViewer>
                 </DockPanel>

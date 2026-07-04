@@ -1,7 +1,6 @@
 using Common.Protocol;
 using Core.Bus;
 using Core.Ecu;
-using Core.Ecu.Personas;
 using Core.Scheduler;
 
 namespace Core.Services;
@@ -74,22 +73,23 @@ public static class EcuExitLogic
         //     timeout to occur." Both paths funnel through here.
         node.State.ClearProgrammingState();
 
-        // 3c. Revert ONLY a runtime UDS-kernel handover back to GMW3110. After a
-        //     $36 sub $80 DownloadAndExecute the ECU was speaking UDS via
-        //     UdsKernelPersona; $20 / P3C timeout is the documented "kernel hands
-        //     control back to the boot ROM" point, so the ECU answers as a stock
-        //     GMW3110 module again from here on.
-        //
-        //     Gate on the kernel persona specifically: a *configured* persona
-        //     (e.g. ford-uds, loaded from the config file) is user state, not
-        //     a runtime handover, and must survive an exit/reset. ResetEcuState
-        //     funnels through here too - and the gauge-link transport flip calls
-        //     ResetEcuState on every ECU - so an unconditional reset silently
-        //     reverted a loaded FordUdsPersona to gmw3110, after which the
-        //     capture sink NRC'd PCMTec's Mode $09 ($7F 09 11) instead of
-        //     answering VIN/CalID.
-        if (node.Persona is UdsKernelPersona)
-            node.Persona = Gmw3110Persona.Instance;
+        // 3b-2. Re-lock SecurityAccess. GMW3110 §8.5.6.2 Exit_Diagnostic_Services()
+        //       re-locks on both branches of $20 / P3C timeout: programming_mode_active
+        //       = NO sets "Security_Access_Unlocked  FALSE", and = YES performs a
+        //       software reset that re-locks via power-on. A fresh $27 handshake is
+        //       therefore required before any security-gated service ($34/$31/$3B) is
+        //       accepted again - without this the ECU would wrongly stay unlocked
+        //       across a session exit, which a real tester would never observe.
+        node.State.ResetSecurity();
+
+        // 3c. Restore the baseline stacks if a runtime SPS-kernel handover is active. After a
+        //     $36 sub $80 DownloadAndExecute the ECU's stacks were replaced by the transient
+        //     kernel binding; $20 / P3C timeout is the documented "kernel hands control back to
+        //     the boot ROM" point, so the ECU answers as its baseline (GMW3110 / Ford) module
+        //     again from here on. ExitKernelMode is a no-op when no kernel handover is active, so
+        //     a configured ECU (e.g. ford-uds, loaded from config - which routes ResetEcuState /
+        //     the transport flip through here too) keeps its stacks untouched.
+        node.ExitKernelMode();
 
         // 3d. Normal communication resumes. ClearProgrammingState above reset NormalCommunicationDisabled, so a
         //     $28 that had silenced this node's autonomous CAN broadcast is now lifted - rebuild the emitter to
@@ -103,7 +103,12 @@ public static class EcuExitLogic
         //    down. Concluding a programming event is silent on the wire.
         if (respondOn != null && !wasProgrammingActive)
         {
-            node.State.Fragmenter.EnqueueResponse(respondOn, node.UsdtResponseCanId,
+            // SendNow, not EnqueueResponse: this $60 is frequently an ECU-initiated
+            // teardown notification (P3C/S3 timeout), not a tester-timed response,
+            // and it fires from the ticker thread where the node's sticky response
+            // pacing must not apply - a deferred or 7F 20 78-prefixed teardown is
+            // wire-incorrect. Bypassing pacing here mirrors FlashTiming's stance.
+            node.State.Fragmenter.SendNow(respondOn, node.UsdtResponseCanId,
                 [Service.Positive(Service.ReturnToNormalMode)]);
         }
     }

@@ -198,7 +198,7 @@ public sealed class PowerPcSnifferTests
         {
             // $34 then a single $36 sub-$80 carrying a recognisable kernel.
             // The $36 itself dumps a per-fragment .bin; sub-$80 then triggers
-            // the bracket-close kernel sniff before persona swap.
+            // the bracket-close kernel sniff before the kernel binding takes over.
             Service34Handler.Handle(node, new byte[] { 0x34, 0x00, 0x00, 0x00, 0x10, 0x00 }, ch);
             ch.RxQueue.TryDequeue(out _);
 

@@ -38,7 +38,7 @@ public sealed class FlashBinPathRoundTripTests
 
             var node = ConfigStore.EcuNodeFrom(dtoIn);
             Assert.Equal(tempPath, node.FlashBinPath);
-            Assert.Equal("ford-uds", node.Persona.Id);
+            Assert.Equal("ford-uds", node.PersonaId);
 
             var dtoOut = ConfigStore.EcuDtoFrom(node);
             Assert.Equal(tempPath, dtoOut.FlashBinPath);
@@ -47,7 +47,7 @@ public sealed class FlashBinPathRoundTripTests
         finally
         {
             try { System.IO.File.Delete(tempPath); } catch { }
-            Core.Ecu.Personas.FordUdsPersona.LoadFlashBin((byte[]?)null);
+            Core.Protocol.FordUdsDispatch.LoadFlashBin((byte[]?)null);
         }
     }
 
