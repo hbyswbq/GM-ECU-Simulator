@@ -109,7 +109,7 @@ public sealed class WaveformViewModel : NotifyPropertyChangedBase
     // beside the picker button so the user can see which file is loaded
     // without giving up the full path on hover.
     public string CsvFileDisplay
-        => string.IsNullOrEmpty(CsvFilePath) ? "(no file picked)" : Path.GetFileName(CsvFilePath);
+        => string.IsNullOrEmpty(CsvFilePath) ? "（未选择文件）" : Path.GetFileName(CsvFilePath);
 
     // Used by the XAML to disable irrelevant fields per shape. FileStream and Constant don't have an inherent
     // amplitude or frequency - FileStream takes its samples from the loaded bin, Constant is a fixed offset.

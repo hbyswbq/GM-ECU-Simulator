@@ -54,22 +54,8 @@
             </Style.Triggers>
         </Style>
 
-        <!-- Same enum providers used by MainWindow. FileStream is omitted on
-             purpose; bin-stream PIDs adopt it internally - the user picks
-             from this list. -->
-        <x:Array x:Key="WaveformShapes" Type="{x:Type wave:WaveformShape}">
-            <wave:WaveformShape>Sin</wave:WaveformShape>
-            <wave:WaveformShape>Triangle</wave:WaveformShape>
-            <wave:WaveformShape>Square</wave:WaveformShape>
-            <wave:WaveformShape>Sawtooth</wave:WaveformShape>
-            <wave:WaveformShape>CsvFile</wave:WaveformShape>
-            <wave:WaveformShape>Constant</wave:WaveformShape>
-        </x:Array>
-        <ObjectDataProvider x:Key="CsvLoopModes" MethodName="GetValues" ObjectType="{x:Type sys:Enum}">
-            <ObjectDataProvider.MethodParameters>
-                <x:Type TypeName="wave:CsvLoopMode"/>
-            </ObjectDataProvider.MethodParameters>
-        </ObjectDataProvider>
+        <!-- Waveform shapes and CSV loop modes use display mapping classes for Chinese labels.
+             FileStream is omitted on purpose; bin-stream PIDs adopt it internally. -->
         <ObjectDataProvider x:Key="PidSizes" MethodName="GetValues" ObjectType="{x:Type sys:Enum}">
             <ObjectDataProvider.MethodParameters>
                 <x:Type TypeName="proto:PidSize"/>
@@ -1127,8 +1113,10 @@
 
                             <Label Style="{StaticResource Label.FormPair}" Grid.Row="0" Grid.Column="0" Content="形状"/>
                             <ComboBox Grid.Row="0" Grid.Column="1" Margin="0,2"
-                                      ItemsSource="{Binding Source={StaticResource WaveformShapes}}"
-                                      SelectedItem="{Binding Shape, UpdateSourceTrigger=PropertyChanged}"/>
+                                      ItemsSource="{x:Static wave:WaveformShapeDisplay.All}"
+                                      DisplayMemberPath="Value"
+                                      SelectedValuePath="Key"
+                                      SelectedValue="{Binding Shape, UpdateSourceTrigger=PropertyChanged}"/>
 
                             <Label Style="{StaticResource Label.FormPair}" Grid.Row="1" Grid.Column="0" Content="振幅"
                                    Visibility="{Binding SupportsAmplitude, Converter={StaticResource BoolToVis}}"/>
@@ -1195,8 +1183,10 @@
                             <Label Style="{StaticResource Label.FormPair}" Grid.Row="7" Grid.Column="0" Content="结束时"
                                    Visibility="{Binding SupportsCsv, Converter={StaticResource BoolToVis}}"/>
                             <ComboBox Grid.Row="7" Grid.Column="1" Margin="0,2"
-                                      ItemsSource="{Binding Source={StaticResource CsvLoopModes}}"
-                                      SelectedItem="{Binding CsvLoopMode, UpdateSourceTrigger=PropertyChanged}"
+                                      ItemsSource="{x:Static wave:CsvLoopModeDisplay.All}"
+                                      DisplayMemberPath="Value"
+                                      SelectedValuePath="Key"
+                                      SelectedValue="{Binding CsvLoopMode, UpdateSourceTrigger=PropertyChanged}"
                                       Visibility="{Binding SupportsCsv, Converter={StaticResource BoolToVis}}"/>
                         </Grid>
                     </ScrollViewer>

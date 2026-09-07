@@ -4,11 +4,6 @@
              xmlns:sys="clr-namespace:System;assembly=mscorlib"
              xmlns:replay="clr-namespace:Common.Replay;assembly=EcuSim.Common">
     <UserControl.Resources>
-        <ObjectDataProvider x:Key="LoopModes" MethodName="GetValues" ObjectType="{x:Type sys:Enum}">
-            <ObjectDataProvider.MethodParameters>
-                <x:Type TypeName="replay:BinReplayLoopMode"/>
-            </ObjectDataProvider.MethodParameters>
-        </ObjectDataProvider>
     </UserControl.Resources>
 
     <DockPanel LastChildFill="True">
@@ -93,10 +88,12 @@
                                Style="{StaticResource Text.Caption}"
                                VerticalAlignment="Center"
                                Margin="0,0,8,0"/>
-                    <ComboBox ItemsSource="{Binding Source={StaticResource LoopModes}}"
-                              SelectedItem="{Binding LoopMode}"
+                    <ComboBox ItemsSource="{x:Static replay:BinReplayLoopModeDisplay.All}"
+                              DisplayMemberPath="Value"
+                              SelectedValuePath="Key"
+                              SelectedValue="{Binding LoopMode}"
                               MinWidth="140"
-                              ToolTip="HoldLast 在最后一个样本处冻结。Loop 循环到开头。Stop 在 bin 结束时转换为已停止。"/>
+                              ToolTip="保持最后值：在最后一个样本处冻结。循环：循环到开头。停止：在 bin 结束时转换为已停止。"/>
                     <Rectangle Width="1" Margin="16,4" Fill="{DynamicResource Border.SubtleBrush}"/>
                     <CheckBox Content="应用启动时自动加载"
                               IsChecked="{Binding AutoLoadOnStart}"
