@@ -123,7 +123,7 @@
                         VerticalAlignment="Center"
                         WindowChrome.IsHitTestVisibleInChrome="True"
                         Visibility="{Binding ShowsSecurityPill, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}"
-                        ToolTip="$27 SecurityAccess state of the selected ECU. Green = unlocked, amber = locked, red = lockout in effect. In DPS modes the pill stays visible before priming so the user knows where the indicator lives.">
+                        ToolTip="$27 安全访问状态。绿色=已解锁，黄色=已锁定，红色=锁定中。">
                     <StackPanel Orientation="Horizontal" DataContext="{Binding SelectedEcu}">
                         <Ellipse Width="8" Height="8" Margin="0,0,8,0"
                                  Fill="{Binding SecurityStatusText, Converter={StaticResource StatusToBrush}, FallbackValue={x:Null}, TargetNullValue={x:Null}}"
@@ -145,7 +145,7 @@
                         Padding="10,3" Margin="0,0,12,0"
                         VerticalAlignment="Center"
                         WindowChrome.IsHitTestVisibleInChrome="True"
-                        ToolTip="Active connection status: J2534 shim registration (HKLM\SOFTWARE\PassThruSupport.04.04\GmEcuSim) or the raw-CAN TCP gauge link.">
+                        ToolTip="当前连接状态：J2534 shim 注册或原始 CAN TCP 仪表链接。">
                     <StackPanel Orientation="Horizontal">
                         <Ellipse Width="8" Height="8" Margin="0,0,8,0"
                                  Fill="{Binding ConnectionStatus, Converter={StaticResource StatusToBrush}}"
@@ -218,25 +218,25 @@
                     <Separator Visibility="{Binding ShowsPrimeMenu, Converter={StaticResource BoolToVis}}"/>
                     <MenuItem Header="清除已加载的存档(_L)"    Command="{Binding ClearPrimeArchiveCommand}"
                               Visibility="{Binding ShowsPrimeMenu, Converter={StaticResource BoolToVis}}"
-                              ToolTip="Forget the persisted prime path. Does not remove ECUs from the current bus."/>
+                              ToolTip="清除已保存的加载路径。不会从当前总线移除 ECU。"/>
                     <Separator/>
                     <MenuItem Header="退出(_X)"     Click="OnExitClicked"/>
                 </MenuItem>
                 <MenuItem Header="J2534(_J)">
                     <MenuItem Header="注册为 J2534 设备…(_R)"
                               Command="{Binding RegisterJ2534Command}"
-                              ToolTip="Writes HKLM\SOFTWARE\PassThruSupport.04.04\GmEcuSim. Triggers a UAC prompt."/>
+                              ToolTip="写入 J2534 注册表项。触发 UAC 提示。"/>
                     <MenuItem Header="取消注册(_U)"
                               Command="{Binding UnregisterJ2534Command}"
-                              ToolTip="Removes only the GmEcuSim entry; never touches other vendors. Triggers a UAC prompt."/>
+                              ToolTip="仅移除 GmEcuSim 项；不影响其他厂商。触发 UAC 提示。"/>
                     <Separator/>
                     <MenuItem Header="显示已注册设备…(_S)"
                               Command="{Binding ShowRegisteredDevicesCommand}"
-                              ToolTip="Lists every J2534 device on this machine in both registry views. Read-only - no UAC."/>
+                              ToolTip="列出本机两个注册表视图中的所有 J2534 设备。只读 - 无需 UAC。"/>
                     <Separator/>
                     <MenuItem Header="重置 IPC 管道(_I)"
                               Command="{Binding ResetIpcPipeCommand}"
-                              ToolTip="Stop and restart the \\.\pipe\GmEcuSim.PassThru server. Any connected host sees a broken pipe on its next call; new PassThruOpen calls succeed again. No UAC."/>
+                              ToolTip="停止并重启命名管道服务器。已连接的主机下次调用时会看到管道断开；新的 PassThruOpen 调用将再次成功。无需 UAC。"/>
                     <Separator/>
                     <MenuItem Header="驱动硬件 $3E 保活(_H)"
                               IsCheckable="True"
@@ -258,11 +258,11 @@
                          even while DPS / Flash Tool flows are running. -->
                     <MenuItem Header="打开 ECU 设置…(_S)"
                               Command="{Binding OpenSetupWindowCommand}"
-                              ToolTip="Open the ECU Editor. Add / remove / save / load ECUs from there too."/>
+                              ToolTip="打开 ECU 编辑器。也可以在那里添加/移除/保存/加载 ECU。"/>
                     <Separator/>
                     <MenuItem Header="重置 ECU 状态(_R)"
                               Command="{Binding ResetStateCommand}"
-                              ToolTip="Power-cycle every ECU: clears the programming session, security unlock, download buffer, and DPID schedules. Equivalent to $20 ReturnToNormalMode + full $27 re-lock applied to each ECU on the bus."/>
+                              ToolTip="对每个 ECU 断电重启：清除编程会话、安全解锁、下载缓冲区和 DPID 调度。"/>
                 </MenuItem>
                 <!-- Developer-only escape hatches. The sidebar Add button now
                      prompts for a bin file (see MainViewModel.AddEcuFromBin);
@@ -290,20 +290,20 @@
                               ToolTip="Stream every bus + diagnostic line to %LOCALAPPDATA%\GmEcuSimulator\logs\bus logs\bus_*.csv on a dedicated background thread. Independent of the 'Log traffic' textbox gate - use when high-volume downloads make the textbox impractical."/>
                     <MenuItem Header="打开文件夹…(_O)"
                               Click="OnOpenLogFolderClicked"
-                              ToolTip="Open the log directory in Explorer."/>
+                              ToolTip="在资源管理器中打开日志目录。"/>
                     <Separator/>
                     <MenuItem Header="包含 J2534 调用(_J)"
                               IsCheckable="True"
                               StaysOpenOnClick="True"
                               IsChecked="{Binding LogIncludeJ2534Calls, Mode=TwoWay}"
                               IsEnabled="{Binding IsFileLoggingEnabled}"
-                              ToolTip="When on, pipe-level J2534 calls (Open/Connect/StartMsgFilter/etc.) reach the file. The textbox / Download tab mirror is unaffected."/>
+                              ToolTip="开启时，管道级 J2534 调用写入文件。文本框/下载选项卡镜像不受影响。"/>
                     <MenuItem Header="包含总线流量(_B)"
                               IsCheckable="True"
                               StaysOpenOnClick="True"
                               IsChecked="{Binding LogIncludeBusTraffic, Mode=TwoWay}"
                               IsEnabled="{Binding IsFileLoggingEnabled}"
-                              ToolTip="When on, every CAN frame (Rx/Tx, including HOST FILTERED) reaches the file. The textbox is unaffected."/>
+                              ToolTip="开启时，每个 CAN 帧（收发，包括主机过滤的）写入文件。文本框不受影响。"/>
                     <MenuItem Header="附加描述标签(_A)"
                               IsCheckable="True"
                               StaysOpenOnClick="True"
@@ -323,7 +323,7 @@
                      ("Open ECU settings"), so View collapsed into a single
                      Theme entry and that's now its own top-level menu. -->
                 <MenuItem Header="主题(_T)" x:Name="ThemeMenu"
-                          ToolTip="Switch the colour palette. Drop your own .xaml palette into %APPDATA%\GmEcuSimulator\Palettes\ to see it listed here."/>
+                          ToolTip="切换配色方案。将您自己的 .xaml 调色板放入 Palettes 目录即可在此列出。"/>
                 <!-- About. The version line is stamped at build time from the
                      git tag (see GmEcuSimulator.csproj StampVersionFromGit /
                      AppInfo.cs), so it always matches the GitHub release the
@@ -333,15 +333,15 @@
                 <MenuItem Header="关于(_A)">
                     <MenuItem Header="协议…(_P)"
                               Click="OnProtocolsClicked"
-                              ToolTip="Show every protocol and service this app supports, and which ones it answers"/>
+                              ToolTip="显示此应用支持的每个协议和服务，以及哪些有响应"/>
                     <Separator/>
                     <MenuItem Header="{Binding AppVersionDisplay, FallbackValue=Version}"
                               Click="OnAboutClicked"
-                              ToolTip="Show version and project details"/>
+                              ToolTip="显示版本和项目详情"/>
                     <Separator/>
                     <MenuItem Header="在 GitHub 上查看发布…(_V)"
                               Click="OnViewReleasesClicked"
-                              ToolTip="Open the GitHub releases page in your browser"/>
+                              ToolTip="在浏览器中打开 GitHub 发布页面"/>
                 </MenuItem>
             </Menu>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,12,0">
@@ -711,13 +711,13 @@
                                               Margin="12,0,0,0"
                                               VerticalAlignment="Center"
                                               IsChecked="{Binding SuppressTesterPresentInWindow, Mode=TwoWay}"
-                                              ToolTip="Hide TesterPresent keepalives ($3E requests and $7E positive responses) from this log window only. The file-log capture is not affected."/>
+                                              ToolTip="仅在此日志窗口中隐藏 TesterPresent 保活。文件记录捕获不受影响。"/>
                                     <CheckBox x:Name="HideBroadcastsCheck"
                                               Content="隐藏广播"
                                               Margin="12,0,0,0"
                                               VerticalAlignment="Center"
                                               IsChecked="{Binding SuppressBroadcastsInWindow, Mode=TwoWay}"
-                                              ToolTip="Hide the periodic DBC broadcast frames (0x12D, 0x207, ...) from this log window only. The file-log capture is not affected."/>
+                                              ToolTip="仅在此日志窗口中隐藏周期性 DBC 广播帧。文件记录捕获不受影响。"/>
                                 </StackPanel>
                             </Border>
                             <Grid>
@@ -760,7 +760,7 @@
                                               VerticalAlignment="Stretch"
                                               Background="Transparent"
                                               MouseDoubleClick="OnBusLogSplitterDoubleClick"
-                                              ToolTip="Drag to resize the CAN frames / J2534 calls panes. Double-click to reset to a 50/50 split.">
+                                              ToolTip="拖动以调整 CAN 帧/J2534 调用窗格大小。双击重置为 50/50 分割。">
                                     <GridSplitter.Template>
                                         <ControlTemplate TargetType="{x:Type GridSplitter}">
                                             <Border Background="Transparent">

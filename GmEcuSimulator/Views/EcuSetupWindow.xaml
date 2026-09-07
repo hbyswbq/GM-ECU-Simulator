@@ -522,7 +522,7 @@
                                                  Text="{Binding DiagnosticAddressHex, UpdateSourceTrigger=LostFocus}"
                                                  FontFamily="{StaticResource Font.Mono}"
                                                  MaxLength="4"
-                                                 ToolTip="GMW3110 8-bit diagnostic address. For SPS type C this is the byte that derives SPS_PrimeReq ($000|addr) and SPS_PrimeRsp ($300|addr). e.g. $11 -> req $011, resp $311. Informational for type A/B (their CAN IDs are explicit)."/>
+                                                 ToolTip="GMW3110 8位诊断地址。对于 SPS C 类型，这是派生 SPS_PrimeReq 和 SPS_PrimeRsp 的字节。"/>
                                     </Grid>
 
                                     <Grid Style="{StaticResource FormCell}"
@@ -536,7 +536,7 @@
                                                  Text="{Binding SelectedSecurityModuleId, Mode=OneWay}"
                                                  IsReadOnly="True"
                                                  FontFamily="{StaticResource Font.Mono}"
-                                                 ToolTip="Seed/key algorithm picked for this primed ECU. In DPS modes the Prime Wizard owns this choice - re-open the wizard (Edit primed) to change it."/>
+                                                 ToolTip="为此加载的 ECU 选择的种子/密钥算法。在 DPS 模式下，加载向导拥有此选择。"/>
                                     </Grid>
 
                                     <Grid Style="{StaticResource FormCell}">

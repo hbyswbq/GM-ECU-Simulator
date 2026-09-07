@@ -138,7 +138,7 @@ public partial class MainWindow : Window
             {
                 var mi = new MenuItem
                 {
-                    Header = p.IsUser ? $"{p.DisplayName}  (user)" : p.DisplayName,
+                    Header = p.IsUser ? $"{p.DisplayName} （用户）" : p.DisplayName,
                     IsCheckable = true,
                     IsChecked = string.Equals(p.Name, ThemeManager.ActivePalette, StringComparison.OrdinalIgnoreCase),
                     StaysOpenOnClick = false,
@@ -151,7 +151,7 @@ public partial class MainWindow : Window
 
         ThemeMenu.Items.Add(new Separator());
 
-        var openFolder = new MenuItem { Header = "Open palettes folder…" };
+        var openFolder = new MenuItem { Header = "打开调色板文件夹…" };
         openFolder.Click += (_, _) =>
         {
             try
@@ -166,7 +166,7 @@ public partial class MainWindow : Window
         };
         ThemeMenu.Items.Add(openFolder);
 
-        var reload = new MenuItem { Header = "Reload palettes from disk" };
+        var reload = new MenuItem { Header = "从磁盘重新加载调色板" };
         reload.Click += (_, _) =>
         {
             ThemeManager.RefreshAvailable();
@@ -179,9 +179,17 @@ public partial class MainWindow : Window
     // means mouse never reaches it so the MenuItem hover trigger never fires.
     private static MenuItem MakeCategoryHeader(string text)
     {
+        var zhText = text switch
+        {
+            "Dark" => "深色",
+            "Mid" => "中等",
+            "Light" => "浅色",
+            "User" => "用户",
+            _ => text,
+        };
         var caption = new TextBlock
         {
-            Text = text.ToUpperInvariant(),
+            Text = zhText.ToUpperInvariant(),
             FontWeight = FontWeights.SemiBold,
             FontSize = 10,
             Opacity = 0.55,
