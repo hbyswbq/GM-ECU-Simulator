@@ -6,6 +6,7 @@
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
         xmlns:proto="clr-namespace:Common.Protocol;assembly=EcuSim.Common"
         xmlns:wave="clr-namespace:Common.Waveforms;assembly=EcuSim.Common"
+        xmlns:sig="clr-namespace:Common.Signals;assembly=EcuSim.Common"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         xmlns:av="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -546,8 +547,10 @@
                                         </Grid.ColumnDefinitions>
                                         <Label Style="{StaticResource Label.FormPair}" Grid.Column="0" Content="场景"/>
                                         <ComboBox Grid.Column="1" Margin="0,2" Height="40"
-                                                  ItemsSource="{Binding Scenarios}"
-                                                  SelectedItem="{Binding SelectedScenario}"
+                                                  ItemsSource="{x:Static sig:ScenarioDisplay.All}"
+                                                  DisplayMemberPath="Value"
+                                                  SelectedValuePath="Key"
+                                                  SelectedValue="{Binding SelectedScenario}"
                                                   ToolTip="驱动此 ECU 实时信号的工作点。切换会使 RPM、负载、MAP、MAF、O2 等向新状态渐变 - 连接的工具会看到模式 $01 和任何信号支持的 $22 PID 移动。"/>
                                     </Grid>
 
