@@ -39,7 +39,7 @@ public static class DefaultEcuConfig
                     new PidDto
                     {
                         Address = 0x1234,
-                        Name = "Coolant temperature",
+                        Name = "冷却液温度",
                         Size = PidSize.Word,
                         DataType = PidDataType.Unsigned,
                         Scalar = 0.0625,
@@ -54,7 +54,7 @@ public static class DefaultEcuConfig
                     new PidDto
                     {
                         Address = 0x5678,
-                        Name = "Engine RPM",
+                        Name = "发动机转速",
                         Size = PidSize.Word,
                         DataType = PidDataType.Unsigned,
                         Scalar = 0.25,
@@ -79,7 +79,7 @@ public static class DefaultEcuConfig
                     new PidDto
                     {
                         Address = 0x1100,
-                        Name = "Trans temperature",
+                        Name = "变速箱温度",
                         Size = PidSize.Word,
                         DataType = PidDataType.Unsigned,
                         Scalar = 0.1,

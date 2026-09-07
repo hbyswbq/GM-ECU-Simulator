@@ -29,19 +29,19 @@ public static class EcuMode22Seeder
 
     public static readonly Mode22Seed[] Seeds =
     {
-        new(0x1421, SignalId.EngineRpm,                  "Engine RPM",                    0.125,       0, 2, PidDataType.Unsigned),
-        new(0x0005, SignalId.CoolantTemp,                "Engine coolant temperature",    0.0078125,   0, 2, PidDataType.Signed),
-        new(0x000A, SignalId.FuelPressure,               "Estimated fuel rail pressure",  0.03125,     0, 2, PidDataType.Unsigned),
-        new(0x000B, SignalId.ManifoldAbsolutePressure,   "Intake manifold abs pressure",  0.00390625,  0, 2, PidDataType.Unsigned),
-        new(0x000F, SignalId.IntakeAirTemp,              "Intake air temperature",        0.0078125,   0, 2, PidDataType.Signed),
-        new(0x000E, SignalId.TimingAdvance,              "Spark advance",                 0.0078125,   0, 2, PidDataType.Signed),
-        new(0x004C, SignalId.ThrottlePosition,           "Throttle position",             0.00152588,  0, 2, PidDataType.Unsigned),
-        new(0x0042, SignalId.ControlModuleVoltage,       "Run/crank voltage",             0.000976562, 0, 2, PidDataType.Signed),
-        new(0x0044, SignalId.CommandedEquivalenceRatio,  "Commanded equivalence ratio",   0.000976562, 0, 2, PidDataType.Unsigned),
-        new(0x0046, SignalId.AmbientAirTemp,             "Estimated ambient air temp",    0.0078125,   0, 2, PidDataType.Signed),
-        new(0x002F, SignalId.FuelLevel,                  "Fuel tank level",               0.00305176,  0, 2, PidDataType.Unsigned),
-        new(0x0049, SignalId.AcceleratorPedalPosition,   "Accelerator pedal position D",  0.00152588,  0, 2, PidDataType.Unsigned),
-        new(0x004A, SignalId.AcceleratorPedalPosition,   "Accelerator pedal position E",  0.00152588,  0, 2, PidDataType.Unsigned),
+        new(0x1421, SignalId.EngineRpm,                  "发动机转速",                    0.125,       0, 2, PidDataType.Unsigned),
+        new(0x0005, SignalId.CoolantTemp,                "发动机冷却液温度",    0.0078125,   0, 2, PidDataType.Signed),
+        new(0x000A, SignalId.FuelPressure,               "估算燃油轨压力",  0.03125,     0, 2, PidDataType.Unsigned),
+        new(0x000B, SignalId.ManifoldAbsolutePressure,   "进气歧管绝对压力",  0.00390625,  0, 2, PidDataType.Unsigned),
+        new(0x000F, SignalId.IntakeAirTemp,              "进气温度",        0.0078125,   0, 2, PidDataType.Signed),
+        new(0x000E, SignalId.TimingAdvance,              "点火提前角",                 0.0078125,   0, 2, PidDataType.Signed),
+        new(0x004C, SignalId.ThrottlePosition,           "节气门位置",             0.00152588,  0, 2, PidDataType.Unsigned),
+        new(0x0042, SignalId.ControlModuleVoltage,       "运行/启动电压",             0.000976562, 0, 2, PidDataType.Signed),
+        new(0x0044, SignalId.CommandedEquivalenceRatio,  "指令当量比",   0.000976562, 0, 2, PidDataType.Unsigned),
+        new(0x0046, SignalId.AmbientAirTemp,             "估算环境空气温度",    0.0078125,   0, 2, PidDataType.Signed),
+        new(0x002F, SignalId.FuelLevel,                  "燃油箱液位",               0.00305176,  0, 2, PidDataType.Unsigned),
+        new(0x0049, SignalId.AcceleratorPedalPosition,   "加速踏板位置 D",  0.00152588,  0, 2, PidDataType.Unsigned),
+        new(0x004A, SignalId.AcceleratorPedalPosition,   "加速踏板位置 E",  0.00152588,  0, 2, PidDataType.Unsigned),
     };
 
     // Adds every seed DID the ECU does not already carry as a Mode22 row. Existing rows win (loaded config / prior
