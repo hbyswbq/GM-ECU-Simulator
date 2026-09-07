@@ -946,8 +946,10 @@
                                                             <DataGridTemplateColumn.CellTemplate>
                                                                 <DataTemplate>
                                                                     <ComboBox Style="{StaticResource DataGrid.InCellComboBox}"
-                                                                              ItemsSource="{Binding Source={StaticResource PidDataTypes}}"
-                                                                              SelectedItem="{Binding DataType, UpdateSourceTrigger=PropertyChanged}"/>
+                                                                              ItemsSource="{x:Static proto:PidDataTypeDisplay.All}"
+                                                                              DisplayMemberPath="Value"
+                                                                              SelectedValuePath="Key"
+                                                                              SelectedValue="{Binding DataType, UpdateSourceTrigger=PropertyChanged}"/>
                                                                 </DataTemplate>
                                                             </DataGridTemplateColumn.CellTemplate>
                                                         </DataGridTemplateColumn>

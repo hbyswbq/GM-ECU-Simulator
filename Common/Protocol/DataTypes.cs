@@ -11,6 +11,22 @@ public enum PidDataType
     Ascii,
 }
 
+/// <summary>Chinese display names for PidDataType, used by the editor's Type ComboBox.</summary>
+public static class PidDataTypeDisplay
+{
+    public static readonly IReadOnlyDictionary<PidDataType, string> Names = new Dictionary<PidDataType, string>
+    {
+        [PidDataType.Bool]     = "布尔",
+        [PidDataType.Unsigned] = "无符号",
+        [PidDataType.Signed]   = "有符号",
+        [PidDataType.Hex]      = "十六进制",
+        [PidDataType.Ascii]    = "文本",
+    };
+
+    public static string Get(PidDataType t) => Names.TryGetValue(t, out var s) ? s : t.ToString();
+    public static IEnumerable<KeyValuePair<PidDataType, string>> All => Names;
+}
+
 public enum PidSize : byte
 {
     Byte = 1,

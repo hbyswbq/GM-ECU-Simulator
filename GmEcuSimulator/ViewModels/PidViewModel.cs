@@ -452,8 +452,8 @@ public sealed class PidViewModel : NotifyPropertyChangedBase
     {
         var list = new List<SignalOption>
         {
-            new(PidValueSource.None,     null, "(none)"),
-            new(PidValueSource.Waveform, null, "Waveform"),
+            new(PidValueSource.None,     null, "（无）"),
+            new(PidValueSource.Waveform, null, "波形"),
         };
         foreach (var d in SignalCatalogue.All) list.Add(new SignalOption(PidValueSource.Signal, d.Id, d.Name));
         return list;
