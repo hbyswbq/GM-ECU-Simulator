@@ -779,7 +779,7 @@
                             <!-- $01 (OBD-II): every J1979 catalogue PID this ECU can answer, read-only (the encoding
                                  is legislated) with a per-row "On" toggle that sets whether the ECU advertises it
                                  (drives the $00/$20 support bitmask). -->
-                            <Expander Header="$01 (OBD-II)" HeaderTemplate="{StaticResource ModeSectionHeader}"
+                            <Expander Header="$01（OBD-II）" HeaderTemplate="{StaticResource ModeSectionHeader}"
                                       IsExpanded="False" Margin="0,0,0,10">
                                 <DataGrid ItemsSource="{Binding Obd2Pids}"
                                           AutoGenerateColumns="False"
@@ -1004,7 +1004,7 @@
                                  $A1 SETUP_DMR to a live engine signal, so the $A0-triggered 0x6A0 datalog stream carries
                                  real values. Hidden for non-Ford ECUs. -->
                             <Border Style="{StaticResource SectionDivider}"/>
-                            <Expander Header="$A1 (SetupDataMode)" HeaderTemplate="{StaticResource ModeSectionHeader}"
+                            <Expander Header="$A1（设置数据模式）" HeaderTemplate="{StaticResource ModeSectionHeader}"
                                       IsExpanded="False" Margin="0,0,0,10"
                                       Visibility="{Binding IsFordUdsPersona, Converter={StaticResource BoolToVis}}">
                                 <DockPanel>

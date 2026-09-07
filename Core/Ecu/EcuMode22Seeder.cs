@@ -44,16 +44,43 @@ public static class EcuMode22Seeder
         new(0x004A, SignalId.AcceleratorPedalPosition,   "加速踏板位置 E",  0.00152588,  0, 2, PidDataType.Unsigned),
     };
 
+    // Known English names from prior seed runs, mapped to their Chinese localisations.
+    // Applied to existing Mode22 rows on seed so configs saved before localisation
+    // pick up the translated labels without losing user-edited rows.
+    private static readonly Dictionary<string, string> LegacyNameMap = new()
+    {
+        ["Engine RPM"]                    = "发动机转速",
+        ["Engine coolant temperature"]    = "发动机冷却液温度",
+        ["Estimated fuel rail pressure"]  = "估算燃油轨压力",
+        ["Intake manifold abs pressure"]  = "进气歧管绝对压力",
+        ["Intake air temperature"]        = "进气温度",
+        ["Spark advance"]                 = "点火提前角",
+        ["Throttle position"]             = "节气门位置",
+        ["Run/crank voltage"]             = "运行/启动电压",
+        ["Commanded equivalence ratio"]   = "指令当量比",
+        ["Estimated ambient air temp"]    = "估算环境空气温度",
+        ["Fuel tank level"]               = "燃油箱液位",
+        ["Accelerator pedal position D"]  = "加速踏板位置 D",
+        ["Accelerator pedal position E"]  = "加速踏板位置 E",
+    };
+
     // Adds every seed DID the ECU does not already carry as a Mode22 row. Existing rows win (loaded config / prior
-    // seed); primed ECUs are skipped entirely.
+    // seed); primed ECUs are skipped entirely. Existing rows whose Name matches a pre-localisation English label
+    // are migrated to the Chinese equivalent (user-edited names are untouched).
     public static void Seed(EcuNode node)
     {
         if (node.IsPrimed) return;
 
         foreach (var s in Seeds)
         {
-            // A Mode22 row already present at this DID wins over the synthetic default.
-            if (node.GetPidByWireId(s.Did) != null) continue;
+            var existing = node.GetPidByWireId(s.Did);
+            if (existing != null)
+            {
+                // Migrate pre-localisation English names to Chinese; leave any other name alone.
+                if (LegacyNameMap.TryGetValue(existing.Name, out var zh) && existing.Name != zh)
+                    existing.Name = zh;
+                continue;
+            }
 
             node.AddPid(new Pid
             {

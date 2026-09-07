@@ -78,10 +78,10 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
         // column-filter set; the order here is the editor's top-to-bottom order.
         Sections = new[]
         {
-            new PidModeSection(this, PidMode.Mode1A, "$1A (Identity / ReadDataByIdentifier)", Pids),
-            new PidModeSection(this, PidMode.Mode22, "$22 (ReadDataByIdentifier)", Pids),
-            new PidModeSection(this, PidMode.Mode2D, "$2D (DefinePIDByAddress)", Pids),
-            new PidModeSection(this, PidMode.Mode23, "$23 (ReadMemoryByAddress)", Pids),
+            new PidModeSection(this, PidMode.Mode1A, "$1A（标识 / 按标识符读取数据）", Pids),
+            new PidModeSection(this, PidMode.Mode22, "$22（按标识符读取数据）", Pids),
+            new PidModeSection(this, PidMode.Mode2D, "$2D（按地址定义PID）", Pids),
+            new PidModeSection(this, PidMode.Mode23, "$23（按地址读取内存）", Pids),
         };
 
         // Re-evaluate Mode2D alias collisions whenever rows are added,
