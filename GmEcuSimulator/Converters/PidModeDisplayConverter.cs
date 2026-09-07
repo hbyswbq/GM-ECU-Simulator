@@ -16,10 +16,10 @@ public sealed class PidModeDisplayConverter : IValueConverter
         => value is PidMode mode
             ? mode switch
             {
-                PidMode.Mode1A => "Mode 1A",
-                PidMode.Mode22 => "Mode 22",
-                PidMode.Mode2D => "Mode 2D",
-                PidMode.Mode23 => "Mode 23",
+                PidMode.Mode1A => "模式 1A",
+                PidMode.Mode22 => "模式 22",
+                PidMode.Mode2D => "模式 2D",
+                PidMode.Mode23 => "模式 23",
                 _              => mode.ToString(),
             }
             : string.Empty;

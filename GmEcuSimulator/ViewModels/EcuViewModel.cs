@@ -169,7 +169,7 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
         var taken = new HashSet<uint>(Broadcasts.Select(b => b.Model.CanId));
         uint canId = 0x100;
         while (taken.Contains(canId)) canId++;
-        var msg = new BroadcastMessage { CanId = canId, Name = "New broadcast", Dlc = 8, PeriodMs = 100, Enabled = true };
+        var msg = new BroadcastMessage { CanId = canId, Name = "新广播", Dlc = 8, PeriodMs = 100, Enabled = true };
         Model.AddBroadcast(msg);
         var vm = new BroadcastMessageViewModel(msg, this);
         Broadcasts.Add(vm);
@@ -508,8 +508,8 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
         // Compose a summary message - shows which fields were populated and
         // surfaces any parser warnings (e.g. "no trampoline pattern detected").
         string modeLabel = mode == BinIdentificationApplier.LoadMode.ReplaceAll
-            ? "Replace all ($1A rows become exactly the bin's set)"
-            : "Merge (bin values added; rows the bin doesn't provide kept)";
+            ? "全部替换 ($1A 行变为 bin 的精确集合)"
+            : "合并 (添加 bin 值; 保留 bin 未提供的行)";
         var lines = new List<string>
         {
             $"Mode: {modeLabel}",
@@ -922,11 +922,11 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
         // with an existing PID name. Bare "New PID" stays the first label so
         // single-PID configs don't get a number suffix gratuitously.
         var existingNames = Pids.Select(p => p.Model.Name).ToHashSet(StringComparer.Ordinal);
-        string name = "New PID";
+        string name = "新 PID";
         if (existingNames.Contains(name))
         {
             int n = 2;
-            while (existingNames.Contains($"New PID {n}")) n++;
+            while (existingNames.Contains($"新 PID {n}")) n++;
             name = $"New PID {n}";
         }
 
@@ -1135,7 +1135,7 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
     private static readonly IReadOnlyList<PersonaOption> SharedPersonas = new[]
     {
         new PersonaOption("ford-uds", "Ford"),
-        new PersonaOption("gmw3110",      "GM Gen 4"),
+        new PersonaOption("gmw3110",      "GM 第4代"),
     };
 
     /// <summary>
@@ -1225,9 +1225,9 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
 
     // ---------------- Security ($27) ----------------
 
-    private const string NoneSecurityModuleLabel = "(none)";
+    private const string NoneSecurityModuleLabel = "(无)";
 
-    /// <summary>All registered module IDs, prefixed with a synthetic "(none)" entry.</summary>
+    /// <summary>All registered module IDs, prefixed with a synthetic "(无)" entry.</summary>
     public ObservableCollection<string> AvailableSecurityModuleIds { get; }
 
     /// <summary>Editable key→string map for the module's SecurityModuleConfig JsonElement.</summary>
@@ -1235,7 +1235,7 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
 
     // ---- Live security state (refreshed from MainWindow refresh timer) ----
 
-    private string securityStatusText = "Locked";
+    private string securityStatusText = "已锁定";
     public string SecurityStatusText
     {
         get => securityStatusText;
@@ -1245,7 +1245,7 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
     // Short, pill-friendly variant of SecurityStatusText for the titlebar
     // pill. The Security tab still uses SecurityStatusText so the level /
     // remaining-time detail stays visible there.
-    private string securityPillText = "ECU Locked";
+    private string securityPillText = "ECU 已锁定";
     public string SecurityPillText
     {
         get => securityPillText;
@@ -1259,14 +1259,14 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
         private set => SetField(ref securityFailedAttemptsText, value);
     }
 
-    private string securityPendingSeedText = "(none)";
+    private string securityPendingSeedText = "(无)";
     public string SecurityPendingSeedText
     {
         get => securityPendingSeedText;
         private set => SetField(ref securityPendingSeedText, value);
     }
 
-    private string securityProgSessionText = "(no module)";
+    private string securityProgSessionText = "(无模块)";
     public string SecurityProgSessionText
     {
         get => securityProgSessionText;
@@ -1322,18 +1322,18 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
         if (s.IsInLockout(nowMs))
         {
             double remainingSec = (s.SecurityLockoutUntilMs - nowMs) / 1000.0;
-            SecurityStatusText = $"Locked out - {remainingSec:F1} s remaining";
-            SecurityPillText   = "ECU Locked out";
+            SecurityStatusText = $"锁定中 - 剩余 {remainingSec:F1} 秒";
+            SecurityPillText   = "ECU 锁定中";
         }
         else if (s.SecurityUnlockedLevel > 0)
         {
-            SecurityStatusText = $"Unlocked (level {s.SecurityUnlockedLevel})";
-            SecurityPillText   = "ECU Unlocked";
+            SecurityStatusText = $"已解锁 (级别 {s.SecurityUnlockedLevel})";
+            SecurityPillText   = "ECU 已解锁";
         }
         else
         {
-            SecurityStatusText = "Locked";
-            SecurityPillText   = "ECU Locked";
+            SecurityStatusText = "已锁定";
+            SecurityPillText   = "ECU 已锁定";
         }
 
         SecurityFailedAttemptsText = $"{s.SecurityFailedAttempts} / 3";
@@ -1341,12 +1341,12 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
         var seed = s.SecurityLastIssuedSeed;
         if (s.SecurityPendingSeedLevel == 0 || seed is null)
         {
-            SecurityPendingSeedText = "(none)";
+            SecurityPendingSeedText = "(无)";
         }
         else
         {
             SecurityPendingSeedText =
-                $"level {s.SecurityPendingSeedLevel}, seed = {string.Join(" ", seed.Select(b => b.ToString("X2")))}";
+                $"级别 {s.SecurityPendingSeedLevel}, 种子 = {string.Join(" ", seed.Select(b => b.ToString("X2")))}";
         }
 
         // Module's programming-session policy + the live shortcut flag that

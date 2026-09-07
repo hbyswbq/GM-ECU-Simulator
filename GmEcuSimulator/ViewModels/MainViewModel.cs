@@ -1143,7 +1143,7 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
         bus.ReplaceNodes(Array.Empty<EcuNode>());
         Rebuild();
         CurrentFilePath = null;
-        StatusText = "New empty configuration";
+        StatusText = "新的空配置";
     }
 
     private void Open()
@@ -1151,7 +1151,7 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
         var settings = AppSettings.Load();
         var dlg = new OpenFileDialog
         {
-            Filter = "Mode config (*.mode.json)|*.mode.json|JSON (*.json)|*.json|All files|*.*",
+            Filter = "模式配置 (*.mode.json)|*.mode.json|JSON (*.json)|*.json|所有文件|*.*",
             InitialDirectory = AppSettings.ResolveInitialDir(settings.LastConfigDir),
         };
         if (dlg.ShowDialog() != true) return;
@@ -1168,7 +1168,7 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
             PrimeArchivePath = cfg.PrimeArchivePath;
             donorBinPath = cfg.DonorBinPath;
             PrimedDataset = null;
-            StatusText = $"Loaded {Ecus.Count} ECU(s) from {dlg.FileName}";
+            StatusText = $"已从 {dlg.FileName} 加载 {Ecus.Count} 个 ECU";
             PersistLastConfigDir(settings, dlg.FileName);
         }
         catch (Exception ex) { Error("Open failed", ex); }
@@ -1184,7 +1184,7 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
             cfg.DonorBinPath = donorBinPath;
             cfg.LiveTiles = SnapshotTileDescriptors();
             ConfigStore.Save(cfg, CurrentFilePath);
-            StatusText = $"Saved to {CurrentFilePath}";
+            StatusText = $"已保存到 {CurrentFilePath}";
         }
         catch (Exception ex) { Error("Save failed", ex); }
     }
@@ -1194,7 +1194,7 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
         var settings = AppSettings.Load();
         var dlg = new SaveFileDialog
         {
-            Filter = "Mode config (*.mode.json)|*.mode.json|JSON (*.json)|*.json|All files|*.*",
+            Filter = "模式配置 (*.mode.json)|*.mode.json|JSON (*.json)|*.json|所有文件|*.*",
             DefaultExt = ".mode.json",
             FileName = currentMode.ConfigFileName(),
             InitialDirectory = AppSettings.ResolveInitialDir(settings.LastConfigDir),
@@ -1208,7 +1208,7 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
             cfg.LiveTiles = SnapshotTileDescriptors();
             ConfigStore.Save(cfg, dlg.FileName);
             CurrentFilePath = dlg.FileName;
-            StatusText = $"Saved to {dlg.FileName}";
+            StatusText = $"已保存到 {dlg.FileName}";
             PersistLastConfigDir(settings, dlg.FileName);
         }
         catch (Exception ex) { Error("Save failed", ex); }
@@ -1279,7 +1279,7 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
         // Also focus the new ECU in the editor's independent selection so its PIDs and Name field target it
         // immediately (the editor's "+" lands here; without this the editor keeps showing the previously-selected ECU).
         SetupSelectedEcu = vm;
-        StatusText = $"Added {node.Name} (blank)";
+        StatusText = $"已添加 {node.Name} (空白)";
         System.Windows.Input.CommandManager.InvalidateRequerySuggested();
     }
 
@@ -1320,7 +1320,7 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
         // falls back to the first remaining (or null on empty).
         if (ReferenceEquals(SelectedEcu, ecu))      SelectedEcu      = Ecus.FirstOrDefault();
         if (ReferenceEquals(SetupSelectedEcu, ecu)) SetupSelectedEcu = Ecus.FirstOrDefault();
-        StatusText = $"Removed {name}";
+        StatusText = $"已移除 {name}";
         System.Windows.Input.CommandManager.InvalidateRequerySuggested();
     }
 
@@ -1355,12 +1355,12 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
             var json = System.Text.Json.JsonSerializer.Serialize(dto,
                 new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(dlg.FileName, json);
-            StatusText = $"Saved ECU '{ecu.Name}' to {Path.GetFileName(dlg.FileName)}";
+            StatusText = $"已保存 ECU '{ecu.Name}' 到 {Path.GetFileName(dlg.FileName)}";
             PersistLastConfigDir(settings, dlg.FileName);
         }
         catch (Exception ex)
         {
-            StatusText = $"Save ECU failed: {ex.Message}";
+            StatusText = $"保存 ECU 失败: {ex.Message}";
         }
     }
 
@@ -1381,7 +1381,7 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
         {
             var json = File.ReadAllText(dlg.FileName);
             var dto = System.Text.Json.JsonSerializer.Deserialize<Common.Persistence.EcuDto>(json);
-            if (dto is null) { StatusText = "Load ECU: empty file"; return; }
+            if (dto is null) { StatusText = "加载 ECU: 空文件"; return; }
 
             // CAN-ID collision check: if the bus already has a node on this
             // ECU's physical request id, suffix the new ECU's name + bump its
@@ -1402,13 +1402,13 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
             vm.BindBus(bus);
             Ecus.Add(vm);
             SelectedEcu = vm;
-            StatusText = $"Loaded ECU '{node.Name}' from {Path.GetFileName(dlg.FileName)}";
+            StatusText = $"已从 {Path.GetFileName(dlg.FileName)} 加载 ECU '{node.Name}'";
             PersistLastConfigDir(settings, dlg.FileName);
             System.Windows.Input.CommandManager.InvalidateRequerySuggested();
         }
         catch (Exception ex)
         {
-            StatusText = $"Load ECU failed: {ex.Message}";
+            StatusText = $"加载 ECU 失败: {ex.Message}";
         }
     }
 
@@ -1433,12 +1433,12 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
             var pids = ecu.Pids.Select(p => Core.Persistence.ConfigStore.PidDtoFrom(p.Model)).ToList();
             var json = System.Text.Json.JsonSerializer.Serialize(pids, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(dlg.FileName, json);
-            StatusText = $"Saved {pids.Count} PID(s) to {Path.GetFileName(dlg.FileName)}";
+            StatusText = $"已保存 {pids.Count} 个 PID 到 {Path.GetFileName(dlg.FileName)}";
             PersistLastPidListDir(settings, dlg.FileName);
         }
         catch (Exception ex)
         {
-            StatusText = $"Save PIDs failed: {ex.Message}";
+            StatusText = $"保存 PID 失败: {ex.Message}";
         }
     }
 
@@ -1461,12 +1461,12 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
             // is appended through the same VM/model pipeline AddPid uses so
             // bindings/lookups stay consistent.
             ecu.ReplacePids(dtos.Select(Core.Persistence.ConfigStore.PidFrom));
-            StatusText = $"Loaded {dtos.Count} PID(s) from {Path.GetFileName(dlg.FileName)}";
+            StatusText = $"已从 {Path.GetFileName(dlg.FileName)} 加载 {dtos.Count} 个 PID";
             PersistLastPidListDir(settings, dlg.FileName);
         }
         catch (Exception ex)
         {
-            StatusText = $"Load PIDs failed: {ex.Message}";
+            StatusText = $"加载 PID 失败: {ex.Message}";
         }
     }
 
@@ -1507,7 +1507,7 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
 
         Common.Dbc.DbcDatabase db;
         try { db = Common.Dbc.DbcParser.Parse(File.ReadAllText(dlg.FileName)); }
-        catch (Exception ex) { StatusText = $"Import DBC failed: {ex.Message}"; return; }
+        catch (Exception ex) { StatusText = $"导入 DBC 失败: {ex.Message}"; return; }
         PersistLastBroadcastDir(settings, dlg.FileName);
 
         var existing = ecu.Model.Broadcasts.ToList();
@@ -1527,10 +1527,10 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
         if (existing.Count == 0)
         {
             // Fresh import - replace the empty set.
-            if (incoming.Count == 0) { StatusText = "Import DBC: no messages selected"; return; }
+            if (incoming.Count == 0) { StatusText = "导入 DBC: 未选择消息"; return; }
             ecu.Model.ReplaceBroadcasts(incoming.OrderBy(m => m.CanId));
             ecu.ReloadBroadcasts();
-            StatusText = $"Imported {incoming.Count} broadcast message(s)";
+            StatusText = $"已导入 {incoming.Count} 条广播消息";
             return;
         }
 
@@ -1539,10 +1539,10 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
         // picks; Append reconciles.
         if (importVm.ApplyMode == BroadcastImportMode.Overwrite)
         {
-            if (incoming.Count == 0) { StatusText = "Import DBC: no messages selected"; return; }
+            if (incoming.Count == 0) { StatusText = "导入 DBC: 未选择消息"; return; }
             ecu.Model.ReplaceBroadcasts(incoming.OrderBy(m => m.CanId));
             ecu.ReloadBroadcasts();
-            StatusText = $"Import DBC: overwrote with {incoming.Count} broadcast message(s)";
+            StatusText = $"导入 DBC: 已覆盖为 {incoming.Count} 条广播消息";
             return;
         }
 
@@ -1556,11 +1556,11 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
         int added = merged.Count(m => !existingIds.Contains(m.CanId));
         int removed = existing.Count(b => !merged.Any(m => m.CanId == b.CanId));
         int replaced = importVm.ReplaceIds.Count;   // same id, different shape -> existing swapped for import
-        if (added == 0 && removed == 0 && replaced == 0) { StatusText = "Import DBC: no changes"; return; }
+        if (added == 0 && removed == 0 && replaced == 0) { StatusText = "导入 DBC: 无更改"; return; }
 
         ecu.Model.ReplaceBroadcasts(merged);
         ecu.ReloadBroadcasts();
-        StatusText = $"Import DBC: +{added} added, -{removed} removed, ~{replaced} replaced ({merged.Count} total)";
+        StatusText = $"导入 DBC: +{added} 新增, -{removed} 移除, ~{replaced} 替换 (共 {merged.Count} 条)";
     }
 
     // Save the selected ECU's broadcast set to a standalone *.dbc.json (a flat List<BroadcastMessageDto>),
@@ -1571,7 +1571,7 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
         var settings = AppSettings.Load();
         var dlg = new SaveFileDialog
         {
-            Filter = "Broadcast config (*.dbc.json)|*.dbc.json|JSON (*.json)|*.json|All files|*.*",
+            Filter = "广播配置 (*.dbc.json)|*.dbc.json|JSON (*.json)|*.json|所有文件|*.*",
             DefaultExt = ".dbc.json",
             FileName = $"{ecu.Model.Name}.dbc.json",
             InitialDirectory = AppSettings.ResolveInitialDir(settings.LastBroadcastDir),
@@ -1582,12 +1582,12 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
             var list = ecu.Model.Broadcasts.Select(Core.Persistence.ConfigStore.BroadcastMessageDtoFrom).ToList();
             var json = System.Text.Json.JsonSerializer.Serialize(list, Common.Persistence.ConfigSerializer.Options);
             File.WriteAllText(dlg.FileName, json);
-            StatusText = $"Saved {list.Count} broadcast message(s) to {Path.GetFileName(dlg.FileName)}";
+            StatusText = $"已保存 {list.Count} 条广播消息到 {Path.GetFileName(dlg.FileName)}";
             PersistLastBroadcastDir(settings, dlg.FileName);
         }
         catch (Exception ex)
         {
-            StatusText = $"Save broadcasts failed: {ex.Message}";
+            StatusText = $"保存广播失败: {ex.Message}";
         }
     }
 
@@ -1598,7 +1598,7 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
         var settings = AppSettings.Load();
         var dlg = new OpenFileDialog
         {
-            Filter = "Broadcast config (*.dbc.json)|*.dbc.json|JSON (*.json)|*.json|All files|*.*",
+            Filter = "广播配置 (*.dbc.json)|*.dbc.json|JSON (*.json)|*.json|所有文件|*.*",
             InitialDirectory = AppSettings.ResolveInitialDir(settings.LastBroadcastDir),
         };
         if (dlg.ShowDialog() != true) return;
@@ -1609,12 +1609,12 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
                            json, Common.Persistence.ConfigSerializer.Options) ?? new();
             ecu.Model.ReplaceBroadcasts(dtos.Select(Core.Persistence.ConfigStore.BroadcastMessageFrom));
             ecu.ReloadBroadcasts();
-            StatusText = $"Loaded {dtos.Count} broadcast message(s) from {Path.GetFileName(dlg.FileName)}";
+            StatusText = $"已从 {Path.GetFileName(dlg.FileName)} 加载 {dtos.Count} 条广播消息";
             PersistLastBroadcastDir(settings, dlg.FileName);
         }
         catch (Exception ex)
         {
-            StatusText = $"Load broadcasts failed: {ex.Message}";
+            StatusText = $"加载广播失败: {ex.Message}";
         }
     }
 
@@ -1704,7 +1704,7 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
         private set => SetField(ref j2534Status, value);
     }
 
-    private string connectionStatus = "(checking…)";
+    private string connectionStatus = "(检查中…)";
     /// <summary>
     /// Status-pill text for the ACTIVE transport. In J2534 mode this mirrors
     /// <see cref="J2534Status"/> (registry-derived); in raw-CAN TCP mode it
@@ -1726,16 +1726,16 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
         if (currentConnection == ConnectionType.RawCanTcp)
         {
             ConnectionStatus =
-                rawCanServer.IsConnected ? "Connected"
-              : rawCanServer.IsRunning  ? $"Listening :{rawCanServer.Port}"
-              :                           "Stopped";
+                rawCanServer.IsConnected ? "已连接"
+              : rawCanServer.IsRunning  ? $"监听中 :{rawCanServer.Port}"
+              :                           "已停止";
         }
         else if (currentConnection == ConnectionType.HardwareCan)
         {
             ConnectionStatus =
-                hardwareCanServer.IsConnected ? $"Connected: {hardwareCanServer.DeviceLabel}"
-              : hardwareCanServer.IsRunning   ? "Opening..."
-              :                                 "Stopped";
+                hardwareCanServer.IsConnected ? $"已连接: {hardwareCanServer.DeviceLabel}"
+              : hardwareCanServer.IsRunning   ? "打开中..."
+              :                                 "已停止";
         }
         else
         {
@@ -1832,7 +1832,7 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
     {
         StatusText = "正在读取注册表…";
         var output = await CapturePwshAsync(ScriptPath("List.ps1"));
-        StatusText = "Ready";
+        StatusText = "就绪";
         var win = new GmEcuSimulator.Views.RegisteredDevicesWindow(output)
         {
             Owner = Application.Current?.MainWindow,
@@ -1849,14 +1849,14 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
         SetJ2534Busy(true);
         try
         {
-            StatusText = "Resetting IPC pipe…";
+            StatusText = "正在重置 IPC 管道…";
             try { await pipeServer.StopAsync(); }
-            catch (Exception ex) { bus.LogSim?.Invoke($"Pipe server Stop during reset failed: {ex.Message}"); }
-            try { pipeServer.Start(); StatusText = "IPC pipe reset. Reconnect from your J2534 host."; }
+            catch (Exception ex) { bus.LogSim?.Invoke($"重置期间管道服务器停止失败: {ex.Message}"); }
+            try { pipeServer.Start(); StatusText = "IPC 管道已重置。请从 J2534 主机重新连接。"; }
             catch (Exception ex)
             {
-                StatusText = $"IPC pipe restart failed: {ex.Message}";
-                bus.LogSim?.Invoke($"Pipe server Start during reset failed: {ex.Message}");
+                StatusText = $"IPC 管道重启失败: {ex.Message}";
+                bus.LogSim?.Invoke($"重置期间管道服务器启动失败: {ex.Message}");
             }
         }
         finally
@@ -1887,15 +1887,15 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
             // is effectively broken for the missing-bitness side.
             J2534Status = (s.Has32, s.Has64) switch
             {
-                (true, true)   => "Shim Registered",
-                (true, false)  => "32-bit Shim Fault",
-                (false, true)  => "64-bit Shim Fault",
-                (false, false) => "Shim Not Registered",
+                (true, true)   => "Shim 已注册",
+                (true, false)  => "32位 Shim 故障",
+                (false, true)  => "64位 Shim 故障",
+                (false, false) => "Shim 未注册",
             };
         }
         catch (Exception ex)
         {
-            J2534Status = $"Status check failed: {ex.Message}";
+            J2534Status = $"状态检查失败: {ex.Message}";
         }
     }
 
@@ -2093,14 +2093,14 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
             replay.Load(source, path);
 
             var headers = replay.ChannelHeaders;
-            if (headers == null) { StatusText = "Bin loaded but no channels found"; return; }
+            if (headers == null) { StatusText = "Bin 已加载但未找到通道"; return; }
             var build = BinChannelToPid.BuildEcus(headers, replay);
             bus.ReplaceNodes(build.Nodes);
             Rebuild();
             BinReplay.RebuildChannelGrid();
             StatusText = build.SkippedChannels == 0
-                ? $"Bin loaded: {build.Nodes.Count} ECU(s), {headers.Count} channels"
-                : $"Bin loaded: {build.Nodes.Count} ECU(s), {headers.Count - build.SkippedChannels} channels ({build.SkippedChannels} skipped)";
+                ? $"Bin 已加载: {build.Nodes.Count} 个 ECU, {headers.Count} 个通道"
+                : $"Bin 已加载: {build.Nodes.Count} 个 ECU, {headers.Count - build.SkippedChannels} 个通道 (跳过 {build.SkippedChannels} 个)";
         }
         catch (Exception ex)
         {
@@ -2121,14 +2121,14 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
                 ConfigStore.ApplyTo(priorSnapshot, bus);
                 priorSnapshot = null;
                 Rebuild();
-                StatusText = "Bin unloaded; prior ECU configuration restored";
+                StatusText = "Bin 已卸载; 先前的 ECU 配置已恢复";
             }
             else
             {
-                StatusText = "Bin unloaded";
+                StatusText = "Bin 已卸载";
             }
         }
-        catch (Exception ex) { Error("Bin unload failed", ex); }
+        catch (Exception ex) { Error("Bin 卸载失败", ex); }
     }
 
     public void RefreshBinReplayLive() => BinReplay.RefreshLive();
@@ -2208,7 +2208,7 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
         PrimeArchivePath = null;
         donorBinPath = null;
         PrimedDataset = null;
-        StatusText = "Prime cleared";
+        StatusText = "Prime 已清除";
     }
 
     // Re-applied by App.OnStartup if the persisted config carried an archive

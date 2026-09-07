@@ -9,7 +9,7 @@ namespace Common.Signals.Engines;
 public sealed class BoostedGasV8 : GasV8Character
 {
     public override string Id => "boosted-gas-v8";
-    public override string DisplayName => "Boosted V8";
+    public override string DisplayName => "增压 V8";
 
     // Peak gauge boost above barometric at wide-open throttle, in kPa. 109 kPa ~= 15.8 psi, putting WOT MAP at 210 kPa
     // absolute (101 baro + 109 boost). A plain knob the editor can expose; the registry constructs the default.

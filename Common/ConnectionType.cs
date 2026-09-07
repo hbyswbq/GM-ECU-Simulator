@@ -29,7 +29,7 @@ public static class ConnectionTypeExtensions
     {
         ConnectionType.J2534 => "J2534",
         ConnectionType.RawCanTcp => "TCP",
-        ConnectionType.HardwareCan => "Hardware",
+        ConnectionType.HardwareCan => "硬件",
         _ => c.ToString(),
     };
 }

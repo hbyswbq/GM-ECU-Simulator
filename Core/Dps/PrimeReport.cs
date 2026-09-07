@@ -41,7 +41,7 @@ public sealed record PrimeReport(
     public string OneLineSummary()
     {
         var name = System.IO.Path.GetFileName(ArchivePath);
-        return $"Primed: {name} ({IdentifierDidCount} DIDs, {PidsSatisfiedFromBin}+{PidsSatisfiedFromArchive} PIDs satisfied, {PidsReturningNrc} NRC-only)";
+        return $"已加载: {name} ({IdentifierDidCount} 个 DID, {PidsSatisfiedFromBin}+{PidsSatisfiedFromArchive} 个 PID 已满足, {PidsReturningNrc} 个仅 NRC)";
     }
 }
 

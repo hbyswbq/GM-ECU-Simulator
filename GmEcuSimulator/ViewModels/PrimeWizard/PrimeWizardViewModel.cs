@@ -93,13 +93,13 @@ public sealed class PrimeWizardViewModel : NotifyPropertyChangedBase
 
     public string StepLabel => currentStep switch
     {
-        PrimeWizardStep.Archive       => "Step 1 of 3: Select DPS archive",
-        PrimeWizardStep.Phase3Review  => "Step 2 of 3: Review Phase 3 reads",
-        PrimeWizardStep.Commit        => "Step 3 of 3: Confirm and apply",
+        PrimeWizardStep.Archive       => "第 1 步/共 3 步: 选择 DPS 存档",
+        PrimeWizardStep.Phase3Review  => "第 2 步/共 3 步: 检查阶段 3 读取",
+        PrimeWizardStep.Commit        => "第 3 步/共 3 步: 确认并应用",
         _ => "",
     };
 
-    public string NextButtonText => "Next >";
+    public string NextButtonText => "下一步 >";
     public bool IsNextVisible    => currentStep != PrimeWizardStep.Commit;
     public bool IsApplyVisible   => currentStep == PrimeWizardStep.Commit;
 

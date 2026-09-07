@@ -6,7 +6,7 @@ namespace Common.Signals.Engines;
 public sealed class NaGasV8 : GasV8Character
 {
     public override string Id => "na-gas-v8";
-    public override string DisplayName => "Naturally Aspirated V8";
+    public override string DisplayName => "自然吸气 V8";
 
     // Vacuum-only curve anchored to barometric: baro*(0.18 + 0.0082*load) reaches exactly baro at 100% load and no
     // higher. No vacuum with the engine stopped - the manifold sits at barometric.

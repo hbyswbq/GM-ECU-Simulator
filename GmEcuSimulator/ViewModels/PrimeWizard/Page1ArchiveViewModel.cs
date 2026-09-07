@@ -82,8 +82,8 @@ public sealed class Page1ArchiveViewModel : NotifyPropertyChangedBase
 
         var dlg = new OpenFileDialog
         {
-            Title = "Select DPS archive",
-            Filter = "DPS archive (*.zip)|*.zip|All files|*.*",
+            Title = "选择 DPS 存档",
+            Filter = "DPS 存档 (*.zip)|*.zip|所有文件|*.*",
             CheckFileExists = true,
             InitialDirectory = initialDir ?? string.Empty,
         };

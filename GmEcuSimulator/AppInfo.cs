@@ -15,7 +15,7 @@ namespace GmEcuSimulator;
 // tag, so a downloaded release reports e.g. "0.4.2" with no suffix.
 internal static class AppInfo
 {
-    public const string ProductName = "GM ECU Simulator";
+    public const string ProductName = "GM ECU 模拟器";
 
     // GitHub project + releases page. Used by the About dialog's "View
     // releases" action so the user can jump straight to the page the version
@@ -27,7 +27,7 @@ internal static class AppInfo
     public static string Version { get; } = ResolveVersion();
 
     // "Version 0.4.2" - the label shown inline on the About menu.
-    public static string VersionDisplay => $"Version {Version}";
+    public static string VersionDisplay => $"版本 {Version}";
 
     private static string ResolveVersion()
     {

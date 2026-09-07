@@ -40,8 +40,8 @@ public static class AppModeExtensions
 
     public static string DisplayName(this AppMode mode) => mode switch
     {
-        AppMode.EcuSimulator => "ECU Simulator",
-        AppMode.DpsSimulator => "DPS Simulator",
+        AppMode.EcuSimulator => "ECU 模拟器",
+        AppMode.DpsSimulator => "DPS 模拟器",
         _ => mode.ToString(),
     };
 }

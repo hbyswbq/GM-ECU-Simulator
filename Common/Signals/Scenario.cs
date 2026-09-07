@@ -74,10 +74,10 @@ public static class ScenarioCatalogue
     // and ends) - the live values come from SweepProfile, so these numbers just give a sane boot/exit value.
     private static readonly Scenario[] AllScenarios =
     {
-        new(ScenarioId.KeyOnEngineOff,  "Key On, Engine Off", EngineRpm:    0, VehicleSpeed:   0, ThrottlePosition:  0, EngineLoad:  0),
-        new(ScenarioId.Idle,            "Idle",               EngineRpm:  750, VehicleSpeed:   0, ThrottlePosition:  0, EngineLoad: 22),
-        new(ScenarioId.Cruise,          "Light Cruise",       EngineRpm: 2000, VehicleSpeed: 100, ThrottlePosition: 18, EngineLoad: 38),
-        new(ScenarioId.AccelDecelSweep, "Accel / Decel Sweep",EngineRpm:  800, VehicleSpeed:   0, ThrottlePosition:  4, EngineLoad: 22),
+        new(ScenarioId.KeyOnEngineOff,  "通电未启动", EngineRpm:    0, VehicleSpeed:   0, ThrottlePosition:  0, EngineLoad:  0),
+        new(ScenarioId.Idle,            "怠速",               EngineRpm:  750, VehicleSpeed:   0, ThrottlePosition:  0, EngineLoad: 22),
+        new(ScenarioId.Cruise,          "轻载巡航",       EngineRpm: 2000, VehicleSpeed: 100, ThrottlePosition: 18, EngineLoad: 38),
+        new(ScenarioId.AccelDecelSweep, "加速/减速扫描",EngineRpm:  800, VehicleSpeed:   0, ThrottlePosition:  4, EngineLoad: 22),
     };
 
     private static readonly IReadOnlyDictionary<ScenarioId, Scenario> ByIdMap = AllScenarios.ToDictionary(s => s.Id);

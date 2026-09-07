@@ -95,7 +95,7 @@ public sealed class Page2Phase3ViewModel : NotifyPropertyChangedBase
     // user edits so they survive Back navigation.
     public void OnEnter()
     {
-        if (context.Archive is null) { ErrorMessage = "No archive selected."; return; }
+        if (context.Archive is null) { ErrorMessage = "未选择存档。"; return; }
 
         try
         {
@@ -103,7 +103,7 @@ public sealed class Page2Phase3ViewModel : NotifyPropertyChangedBase
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Prime failed: {ex.Message}";
+            ErrorMessage = $"加载失败: {ex.Message}";
             return;
         }
 
@@ -154,8 +154,8 @@ public sealed class Page2Phase3ViewModel : NotifyPropertyChangedBase
 
         var dlg = new OpenFileDialog
         {
-            Title = "Load DIDs from an ECU bin",
-            Filter = "Binary (*.bin)|*.bin|All files|*.*",
+            Title = "从 ECU bin 加载 DID",
+            Filter = "二进制 (*.bin)|*.bin|所有文件|*.*",
             CheckFileExists = true,
             InitialDirectory = initialDir ?? string.Empty,
         };
@@ -163,12 +163,12 @@ public sealed class Page2Phase3ViewModel : NotifyPropertyChangedBase
 
         byte[] bytes;
         try { bytes = File.ReadAllBytes(dlg.FileName); }
-        catch (Exception ex) { InfoMessage = $"Could not read bin: {ex.Message}"; return; }
+        catch (Exception ex) { InfoMessage = $"无法读取 bin: {ex.Message}"; return; }
 
         var binId = Mode1ADidBinExtractor.Parse(bytes);
         if (binId is null)
         {
-            InfoMessage = "Walker could not anchor a service dispatcher in that bin; nothing loaded.";
+            InfoMessage = "遍历器无法在该 bin 中定位服务调度器; 未加载任何内容。";
             return;
         }
 
@@ -301,7 +301,7 @@ public sealed class Phase3RowViewModel : NotifyPropertyChangedBase
             if (!SetField(ref valueHex, value ?? "")) return;
             ParsedBytes = TryParseHex(valueHex);
             if (ParsedBytes is null && !string.IsNullOrWhiteSpace(valueHex))
-                ValueError = "Invalid hex";
+                ValueError = "无效的十六进制";
             else
             {
                 ValueError = null;

@@ -128,8 +128,8 @@ public sealed class WaveformViewModel : NotifyPropertyChangedBase
         var settings = AppSettings.Load();
         var picker = new OpenFileDialog
         {
-            Filter = "CSV (*.csv)|*.csv|All files|*.*",
-            Title = "Pick a CSV (column A = time in seconds, column B = value)",
+            Filter = "CSV (*.csv)|*.csv|所有文件|*.*",
+            Title = "选择 CSV (A列 = 时间(秒), B列 = 值)",
             InitialDirectory = AppSettings.ResolveInitialDir(settings.LastCsvWaveformDir),
         };
         if (picker.ShowDialog() != true) return;
