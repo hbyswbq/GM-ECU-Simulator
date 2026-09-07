@@ -21,7 +21,7 @@ public sealed class ProtocolsWindowViewModel
                 total += p.ServiceCount;
                 answered += p.ImplementedCount;
             }
-            return $"{answered} of {total} services across {Protocols.Count} protocols have a positive response path";
+            return $"{answered} / {total} 个服务，跨 {Protocols.Count} 个协议，具有正向响应路径";
         }
     }
 }

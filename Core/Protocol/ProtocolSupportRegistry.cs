@@ -70,31 +70,26 @@ public static class ProtocolSupportRegistry
         return new[]
         {
             new ProtocolSupport(
-                "J1979", "SAE J1979 (OBD-II)",
-                "Legislated emissions diagnostics. Make-agnostic, so these handlers are shared - GM " +
-                "reaches them on an OBD CAN id and the Ford capture stack delegates $01/$09 to the same code.",
+                "J1979", "SAE J1979（OBD-II）",
+                "法定排放诊断。与厂商无关，因此这些处理器是共享的 - GM 在 OBD CAN ID 上访问它们，Ford 捕获栈将 $01/$09 委托给相同的代码。",
                 FromCatalog(StandardCatalogs.J1979, J1979Implemented)),
 
             new ProtocolSupport(
-                "GMW3110", "GMW3110-2010 (GMLAN enhanced diagnostics)",
-                "The GM dialect on real E38/E67 OBD-dispatcher silicon: 14 KWP-derived core services plus " +
-                "the 5 GMLAN-enhanced $A0+ modes. NOT ISO-14229 UDS.",
+                "GMW3110", "GMW3110-2010（GMLAN 增强诊断）",
+                "真实 E38/E67 OBD 调度器芯片上的 GM 方言：14 个源自 KWP 的核心服务加上 5 个 GMLAN 增强的 $A0+ 模式。不是 ISO-14229 UDS。",
                 FromCatalog(StandardCatalogs.Gmw3110, Gmw3110Implemented)),
 
             new ProtocolSupport(
-                "UDS", "UDS / ISO 14229 (Ford PCM capture)",
-                "The Ford-only UDS surface plus the Ford-proprietary $A0/$A1/$B1 DMR services. The capture " +
-                "stack logs every request; ticked services answer, the rest are NRC'd. (OBD modes appear in " +
-                "the J1979 section above.)",
+                "UDS", "UDS / ISO 14229（Ford PCM 捕获）",
+                "仅 Ford 的 UDS 接口加上 Ford 专有 $A0/$A1/$B1 DMR 服务。捕获栈记录每个请求；勾选的服务响应，其余返回 NRC。（OBD 模式显示在上方的 J1979 分区。）",
                 // The Ford catalog is OBD + UDS + proprietary; the OBD modes are shown in the J1979
                 // section, so drop them here and keep the UDS gospel (null group) + proprietary group.
                 FromCatalog(StandardCatalogs.Ford, FordImplemented,
                             d => d.Group != StandardCatalogs.FordObdGroup)),
 
             new ProtocolSupport(
-                "UDS-Kernel", "GM SPS programming kernel (transient)",
-                "The narrow UDS-flavoured service table a downloaded SPS kernel presents after $36 sub $80 " +
-                "DownloadAndExecute, until $20 or the P3C timeout hands control back.",
+                "UDS-Kernel", "GM SPS 编程内核（瞬态）",
+                "下载的 SPS 内核在 $36 子功能 $80 DownloadAndExecute 之后呈现的窄 UDS 风格服务表，直到 $20 或 P3C 超时将控制权交回。",
                 FromCatalog(ProtocolStacks.UdsKernel.Catalog, KernelImplemented)),
         };
     }
@@ -124,7 +119,7 @@ public sealed record ProtocolSupport(
     public int ImplementedCount => Services.Count(s => s.Implemented);
 
     // "11 of 19 services answered" - the at-a-glance support stat the window shows per section.
-    public string SupportSummary => $"{ImplementedCount} of {ServiceCount} services answered";
+    public string SupportSummary => $"{ImplementedCount} / {ServiceCount} 个服务已响应";
 
     public IReadOnlyList<ServiceGroup> Groups
     {

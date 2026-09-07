@@ -44,8 +44,8 @@ public static class ProtocolStacks
     // CommonServices during kernel mode.
     public static readonly IProtocolStack UdsKernel = new ProtocolStack(
         "UDS-Kernel", ServiceCatalog.Of(
-            (0x20, "ReturnToNormalMode"), (0x22, "ReadDataByIdentifier"), (0x31, "RoutineControl"),
-            (0x34, "RequestDownload"), (0x35, "RequestUpload"), (0x36, "TransferData"), (0x3E, "TesterPresent")),
+            (0x20, "返回正常模式"), (0x22, "按标识符读取数据"), (0x31, "例程控制"),
+            (0x34, "请求下载"), (0x35, "请求上传"), (0x36, "传输数据"), (0x3E, "测试仪在线")),
         NrcProfile.Gm, SessionModel.Gm, TimingProfile.Gm,
         new AddressingModel(Request: 0x7E0, Response: 0x7E8, Functional: AddressingModel.Obd2Functional),
         DispatchUdsKernel);
