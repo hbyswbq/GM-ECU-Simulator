@@ -84,15 +84,15 @@ public sealed class PidModeSection : NotifyPropertyChangedBase
         // Same projections the old single grid used, minus Mode. Selector text feeds the column's substring filter;
         // SortPath is the property the column orders by. The identifier column is headed "Address" for the $23
         // ReadMemoryByAddress section - its rows key on a 32-bit memory address, not a wire PID id - and "PID" elsewhere.
-        IdentifierColumnFilter = Make(Mode == PidMode.Mode23 ? "Address" : "PID", "Address",
+        IdentifierColumnFilter = Make(Mode == PidMode.Mode23 ? "地址" : "PID", "Address",
                                       p => $"{p.IdentifierLabel} {p.AddressHex}");
-        NameColumnFilter       = Make("Name", "Name", p => p.Name);
-        SizeColumnFilter       = Make("Size (B)", "Model.ResponseLength", p => p.LengthBytesText);
-        TypeColumnFilter       = Make("Type", "DataType", p => p.DataType.ToString());
-        SignalColumnFilter     = Make("Signal", "SignalDisplay", p => p.SignalDisplay);
-        ScalarColumnFilter     = Make("Scalar", "Scalar", p => p.Scalar.ToString());
-        OffsetColumnFilter     = Make("Offset", "Offset", p => p.Offset.ToString());
-        UnitColumnFilter       = Make("Unit", "Unit", p => p.Unit);
+        NameColumnFilter       = Make("名称", "Name", p => p.Name);
+        SizeColumnFilter       = Make("大小(字节)", "Model.ResponseLength", p => p.LengthBytesText);
+        TypeColumnFilter       = Make("类型", "DataType", p => p.DataType.ToString());
+        SignalColumnFilter     = Make("信号", "SignalDisplay", p => p.SignalDisplay);
+        ScalarColumnFilter     = Make("比例", "Scalar", p => p.Scalar.ToString());
+        OffsetColumnFilter     = Make("偏移", "Offset", p => p.Offset.ToString());
+        UnitColumnFilter       = Make("单位", "Unit", p => p.Unit);
 
         View.Filter = Matches;
 
