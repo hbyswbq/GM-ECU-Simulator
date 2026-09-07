@@ -23,7 +23,7 @@
                     Padding="10,6"
                     Margin="0,0,8,0"
                     Command="{Binding LoadFromBinCommand}"
-                    ToolTip="Walk a donor / sibling ECU bin and fill non-bytecode rows with the walker's authentic byte sequences."/>
+                    ToolTip="遍历供体/同级 ECU bin 并用遍历器的真实字节序列填充非字节码行。"/>
             <Button Content="自动填充空行"
                     MinWidth="200"
                     Padding="10,6"

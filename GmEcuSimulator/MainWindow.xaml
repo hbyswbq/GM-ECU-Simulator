@@ -242,7 +242,7 @@
                               IsCheckable="True"
                               StaysOpenOnClick="True"
                               IsChecked="{Binding AllowPeriodicTesterPresent, Mode=TwoWay}"
-                              ToolTip="When on, the simulator drives $3E TesterPresent on the host's behalf for any frame registered via PassThruStartPeriodicMsg. Off accepts the registration but skips the tick - delegating hosts have to keep their own P3C session alive."/>
+                              ToolTip="开启时，模拟器代表主机为通过 PassThruStartPeriodicMsg 注册的帧驱动 $3E TesterPresent。关闭时接受注册但跳过滴答 - 委托主机必须自行保持 P3C 会话活跃。"/>
                 </MenuItem>
                 <MenuItem Header="ECU(_E)">
                     <!-- Per-ECU Save / Load moved to the ECU Editor window's
@@ -273,7 +273,7 @@
                     <MenuItem Header="开发者(_D)">
                         <MenuItem Header="添加空白 ECU(_B)"
                                   Command="{Binding AddBlankEcuCommand}"
-                                  ToolTip="Create a fresh ECU with synthetic defaults from EcuIdentitySeeder. This is the same thing the sidebar 'Add ECU' button now does for non-DPS modes; kept here for quick access. Import real identity from a flash readback via the editor's Advanced card ('Load identity from bin...')."/>
+                                  ToolTip="使用 EcuIdentitySeeder 的合成默认值创建新 ECU。与侧边栏'添加 ECU'按钮在非 DPS 模式下的操作相同；保留在此以便快速访问。通过编辑器的高级选项卡从闪存读回导入真实标识。"/>
                     </MenuItem>
                 </MenuItem>
                 <MenuItem Header="日志(_L)">
@@ -287,7 +287,7 @@
                               IsCheckable="True"
                               StaysOpenOnClick="True"
                               IsChecked="{Binding IsFileLoggingEnabled, Mode=TwoWay}"
-                              ToolTip="Stream every bus + diagnostic line to %LOCALAPPDATA%\GmEcuSimulator\logs\bus logs\bus_*.csv on a dedicated background thread. Independent of the 'Log traffic' textbox gate - use when high-volume downloads make the textbox impractical."/>
+                              ToolTip="在专用后台线程上将每条总线+诊断行流式传输到 CSV 文件。独立于'记录流量'文本框门控 - 当高容量下载使文本框不实用时使用。"/>
                     <MenuItem Header="打开文件夹…(_O)"
                               Click="OnOpenLogFolderClicked"
                               ToolTip="在资源管理器中打开日志目录。"/>
@@ -309,13 +309,13 @@
                               StaysOpenOnClick="True"
                               IsChecked="{Binding LogAppendDescriptionTag, Mode=TwoWay}"
                               IsEnabled="{Binding IsFileLoggingEnabled}"
-                              ToolTip="Suffix every bus-frame line with a short human-readable tag (e.g. 'SecurityAccess - RequestSeed', 'ISO-TP FF (3110B) - TransferData @ 003FAFE0'). Tag is produced by UdsAnnotator from the raw bytes."/>
+                              ToolTip="为每条总线帧行添加简短的人类可读标签（例如'SecurityAccess - RequestSeed'）。标签由 UdsAnnotator 从原始字节生成。"/>
                     <MenuItem Header="折叠批量传输(_C)"
                               IsCheckable="True"
                               StaysOpenOnClick="True"
                               IsChecked="{Binding LogCollapseBulkTransfers, Mode=TwoWay}"
                               IsEnabled="{Binding IsFileLoggingEnabled}"
-                              ToolTip="Condense long ISO-TP transfers in the bus log: first 3 + last 3 CFs visible, middle replaced with a single '-- bulk transfer collapsed: N frames hidden --' marker. FC/TesterPresent noise inside the collapsed window is suppressed too. Threshold is 10 CFs - shorter transfers log normally."/>
+                              ToolTip="压缩总线日志中的长 ISO-TP 传输：显示前3+后3个连续帧，中间替换为单个折叠标记。折叠窗口内的 FC/TesterPresent 噪音也被抑制。阈值为10个连续帧 - 较短的传输正常记录。"/>
                 </MenuItem>
                 <!-- Theme picker promoted to top-level. The previous "View"
                      wrapper only existed to host this submenu + the Setup-
@@ -354,7 +354,7 @@
                               ItemsSource="{Binding AvailableModes}"
                               SelectedItem="{Binding SelectedModeOption, Mode=TwoWay}"
                               VerticalAlignment="Center"
-                              ToolTip="Top-level mode and connection type. Switching clears the current ECU set and re-initialises the bus; you'll be offered a save first when leaving a persistable mode.">
+                              ToolTip="顶层模式和连接类型。切换会清除当前 ECU 集合并重新初始化总线；离开可持久化模式时会先提示保存。">
                         <ComboBox.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding Label}"/>
@@ -375,7 +375,7 @@
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="{Binding PrimeArchiveDisplay}" Style="{StaticResource Text.MonoDim}"
                                VerticalAlignment="Center" Margin="0,0,12,0"
-                               ToolTip="Active Prime-From-Archive state. Set via the ECUs pane's Add button in DPS modes."/>
+                               ToolTip="当前从存档加载状态。在 DPS 模式下通过 ECU 面板的添加按钮设置。"/>
                     <TextBlock Text="管道" Style="{StaticResource Text.Caption}" Margin="0,0,6,0"
                                VerticalAlignment="Center"/>
                     <TextBlock Text="\\.\pipe\GmEcuSim.PassThru" Style="{StaticResource Text.MonoDim}"
@@ -687,7 +687,7 @@
                                               Content="记录流量"
                                               VerticalAlignment="Center"
                                               IsChecked="{Binding IsLoggingEnabled, Mode=TwoWay}"
-                                              ToolTip="Master gate for the bus log AND the Download tab's mirror. Off by default - at $AA Fast 25Hz the bus frames alone can flood the textbox quickly."/>
+                                              ToolTip="总线日志和下载选项卡镜像的主门控。默认关闭 - 在 $AA 快速 25Hz 下，仅总线帧就可能迅速淹没文本框。"/>
                                     <Button Content="清除" Click="OnClearLogClicked"
                                             Margin="16,0,0,0"/>
                                     <Rectangle Width="1" Margin="12,4" Fill="{DynamicResource Border.SubtleBrush}"/>
@@ -699,13 +699,13 @@
                                                VerticalAlignment="Center"
                                                FontFamily="{StaticResource Font.Mono}"
                                                Foreground="{DynamicResource Text.SecondaryBrush}"
-                                               ToolTip="File-log status. Toggle 'Log to file' under the Log menu to start/stop the sink."/>
+                                               ToolTip="文件记录状态。在日志菜单下切换'记录到文件'以启动/停止接收器。"/>
                                     <Rectangle Width="1" Margin="12,4" Fill="{DynamicResource Border.SubtleBrush}"/>
                                     <CheckBox x:Name="MaximizeBusLogCheck"
                                               Content="最大化"
                                               VerticalAlignment="Center"
                                               IsChecked="{Binding IsMaximized, Mode=TwoWay}"
-                                              ToolTip="Collapse the ECU/PID editor and fill the window with the workspace tabs. Shared with the Download tab's Maximize toggle."/>
+                                              ToolTip="折叠 ECU/PID 编辑器并用工作区选项卡填满窗口。与下载选项卡的最大化切换共享。"/>
                                     <CheckBox x:Name="HideTesterPresentCheck"
                                               Content="隐藏 $3E"
                                               Margin="12,0,0,0"

@@ -402,7 +402,7 @@
                                 Padding="10,4"
                                 Command="{Binding EditPrimeCommand}"
                                 Visibility="{Binding IsPrimed, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed, TargetNullValue=Collapsed}"
-                                ToolTip="Re-open the DPS Prime Wizard with this ECU's prior selections pre-filled. Replaces the ECU atomically on Apply."/>
+                                ToolTip="使用此 ECU 之前的选择重新打开 DPS 加载向导。应用时原子替换 ECU。"/>
                     </Grid>
                     <!-- Pane summary line. The Save / Load PIDs buttons used to live here, but flush
                          above the "ECU settings" form they read as acting on the ECU settings (CAN
@@ -508,7 +508,7 @@
                                         <TextBox Grid.Column="1" Margin="0,2"
                                                  Text="{Binding FlowControlBlockSizeHex, UpdateSourceTrigger=LostFocus}"
                                                  FontFamily="{StaticResource Font.Mono}"
-                                                 ToolTip="ISO 15765-2 FlowControl BlockSize (FC.BS). When this ECU receives a First Frame, it replies with FC = 30 BS 00. BS tells the tester how many Consecutive Frames to send before waiting for another FC: 0 = send all CFs in one burst (most permissive, works with most hosts); 1 = send 1 CF then wait for another FC, etc. Set BS=1 for the 6Speed.T43 tester - it sniffs the FC tail for the pattern '01' to recognise a T43 TCM and won't start the kernel upload otherwise."/>
+                                                 ToolTip="ISO 15765-2 流控块大小 (FC.BS)。当此 ECU 收到首帧时，回复 FC = 30 BS 00。BS 告诉测试仪在等待另一个 FC 之前发送多少个连续帧：0 = 一次性发送所有 CF（最宽松，适用于大多数主机）；1 = 发送1个 CF 然后等待另一个 FC，等等。6Speed.T43 测试仪设置 BS=1 - 它嗅探 FC 尾部的'01'模式来识别 T43 TCM，否则不会开始内核上传。"/>
                                     </Grid>
 
                                     <Grid Style="{StaticResource FormCell}"
@@ -550,7 +550,7 @@
                                                   DisplayMemberPath="DisplayName"
                                                   SelectedValuePath="Id"
                                                   SelectedValue="{Binding SelectedEngineModelId}"
-                                                  ToolTip="The engine character driving this ECU's derived signals (induction, airflow, fuelling). Naturally Aspirated keeps MAP in vacuum (fuel pressure tops out at the 4 bar base); Boosted V8 drives MAP above barometric under load, so MAF and fuel pressure rise above base. Swaps live - a connected tool sees the change on the next read."/>
+                                                  ToolTip="驱动此 ECU 派生信号（进气、气流、供油）的引擎特性。自然吸气保持 MAP 在真空（燃油压力最高为4巴基准）；增压 V8 在负载下驱动 MAP 高于大气压，因此 MAF 和燃油压力高于基准。实时交换 - 连接的工具在下次读取时看到变化。"/>
                                     </Grid>
 
                                     <Grid Style="{StaticResource FormCell}">
@@ -562,7 +562,7 @@
                                         <ComboBox Grid.Column="1" Margin="0,2" Height="40"
                                                   ItemsSource="{Binding Scenarios}"
                                                   SelectedItem="{Binding SelectedScenario}"
-                                                  ToolTip="Operating point driving this ECU's live signals. Switching it ramps RPM, load, MAP, MAF, O2 etc. toward the new state - a connected tool sees Mode $01 and any signal-backed $22 PIDs move."/>
+                                                  ToolTip="驱动此 ECU 实时信号的工作点。切换会使 RPM、负载、MAP、MAF、O2 等向新状态渐变 - 连接的工具会看到模式 $01 和任何信号支持的 $22 PID 移动。"/>
                                     </Grid>
 
                                     <!-- AccelDecelSweep timing is fixed at SweepProfile.Default; the per-ECU Sweep*
@@ -583,16 +583,16 @@
                                                 HorizontalAlignment="Right" Margin="0,0,0,6">
                                         <Button Content="导入 DBC..." Padding="10,4" Margin="0,0,6,0"
                                                 Command="{Binding DataContext.ImportDbcCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
-                                                ToolTip="Parse a .dbc file, pick the transmitter + messages, and add them to this ECU's broadcast set."/>
+                                                ToolTip="解析 .dbc 文件，选择发送器和消息，并添加到此 ECU 的广播集。"/>
                                         <Button Width="30" Height="26" Padding="0" Margin="0,0,6,0"
                                                 Command="{Binding DataContext.SaveBroadcastsCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
-                                                ToolTip="Save this ECU's broadcast set to a *.dbc.json file.">
+                                                ToolTip="将此 ECU 的广播集保存到 *.dbc.json 文件。">
                                             <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="14"
                                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Button>
                                         <Button Width="30" Height="26" Padding="0" Margin="0,0,12,0"
                                                 Command="{Binding DataContext.LoadBroadcastsCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
-                                                ToolTip="Load a *.dbc.json file and replace this ECU's broadcast set.">
+                                                ToolTip="加载 *.dbc.json 文件并替换此 ECU 的广播集。">
                                             <TextBlock Text="&#xE8E5;" FontFamily="Segoe MDL2 Assets" FontSize="14"
                                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Button>
@@ -634,7 +634,7 @@
                                                         <Button Command="{Binding ToggleExpandedCommand}"
                                                                 Background="Transparent" BorderThickness="0"
                                                                 Padding="0" Cursor="Hand"
-                                                                ToolTip="Show / hide this message's signals">
+                                                                ToolTip="显示/隐藏此消息的信号">
                                                             <TextBlock Text="{Binding ChevronGlyph}"
                                                                        FontFamily="Segoe MDL2 Assets" FontSize="12"
                                                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -695,7 +695,7 @@
                                                                             <ComboBox ItemsSource="{Binding SourceOptions}"
                                                                                       DisplayMemberPath="Display"
                                                                                       SelectedItem="{Binding SelectedSource, UpdateSourceTrigger=PropertyChanged}"
-                                                                                      ToolTip="Where this field's value comes from: (none)=0, Constant=the fixed value, or a live engine signal."/>
+                                                                                      ToolTip="此字段值的来源：(无)=0，常量=固定值，或实时引擎信号。"/>
                                                                         </DataTemplate>
                                                                     </DataGridTemplateColumn.CellTemplate>
                                                                 </DataGridTemplateColumn>
@@ -761,13 +761,13 @@
                                             ToolTip="将精选的默认 PID 集（基线 $1A 标识 DID + 13 个实时 $22 PID）添加到此 ECU。可选：植入不再自动发生，因此删除的行不会在重新加载时重新出现。现有行永远不会被覆盖；DPS 加载的 ECU 禁用。"/>
                                     <Button Style="{StaticResource IconButton}"
                                             Command="{Binding DataContext.SavePidsCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
-                                            ToolTip="Save this ECU's $1A/$22/$2D PID list (including waveform settings) to a .pids.json file. Does not include ECU settings or CAN broadcasts - use the sidebar's Save ECU for the whole ECU.">
+                                            ToolTip="将此 ECU 的 $1A/$22/$2D PID 列表（包括波形设置）保存到 .pids.json 文件。不包括 ECU 设置或 CAN 广播 - 使用侧边栏的保存 ECU 保存整个 ECU。">
                                         <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="16"/>
                                     </Button>
                                     <Button Style="{StaticResource IconButton}"
                                             Margin="0"
                                             Command="{Binding DataContext.LoadPidsCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
-                                            ToolTip="Load a .pids.json file and replace this ECU's $1A/$22/$2D PID list with its contents.">
+                                            ToolTip="加载 .pids.json 文件并用其内容替换此 ECU 的 $1A/$22/$2D PID 列表。">
                                         <TextBlock Text="&#xE8E5;" FontFamily="Segoe MDL2 Assets" FontSize="16"/>
                                     </Button>
                                 </StackPanel>
@@ -796,7 +796,7 @@
                                                 <DataTemplate>
                                                     <CheckBox IsChecked="{Binding Supported, UpdateSourceTrigger=PropertyChanged}"
                                                               HorizontalAlignment="Center"
-                                                              ToolTip="Advertise this $01 PID. Drives the $00/$20 support bitmask; unchecking makes a tester's request for it return NRC $31."/>
+                                                              ToolTip="广播此 $01 PID。驱动 $00/$20 支持位掩码；取消勾选会使测试仪的请求返回 NRC $31。"/>
                                                 </DataTemplate>
                                             </DataGridTemplateColumn.CellTemplate>
                                         </DataGridTemplateColumn>
@@ -935,7 +935,7 @@
                                                                              Validation.ErrorTemplate="{StaticResource ValidationErrorTemplate}"
                                                                              Text="{Binding LengthBytesText, UpdateSourceTrigger=LostFocus, ValidatesOnNotifyDataErrors=True}"
                                                                              IsReadOnly="{Binding Data.IsMode1A, Source={StaticResource SecProxy}}"
-                                                                             ToolTip="Response length in bytes (1-99). E.g. a VIN is 17 bytes. Read-only for $1A - the identity value's length drives it."/>
+                                                                             ToolTip="响应长度（字节，1-99）。例如 VIN 为 17 字节。$1A 为只读 - 标识值的长度驱动它。"/>
                                                                 </DataTemplate>
                                                             </DataGridTemplateColumn.CellTemplate>
                                                         </DataGridTemplateColumn>
@@ -965,7 +965,7 @@
                                                                               ItemsSource="{Binding SignalSourceOptions}"
                                                                               DisplayMemberPath="Display"
                                                                               SelectedItem="{Binding SelectedSource, UpdateSourceTrigger=PropertyChanged}"
-                                                                              ToolTip="Where this PID's value comes from. '(none)' = a flat 0; 'Waveform' = the row's waveform generator; any signal = the live engine model (encoded with this row's Scalar/Offset/Size)."/>
+                                                                              ToolTip="此 PID 值的来源。'(无)' = 固定 0；'波形' = 行的波形生成器；任何信号 = 实时引擎模型（使用此行的比例/偏移/大小编码）。"/>
                                                                 </DataTemplate>
                                                             </DataGridTemplateColumn.CellTemplate>
                                                         </DataGridTemplateColumn>
@@ -1013,7 +1013,7 @@
                                     <CheckBox DockPanel.Dock="Top" Margin="0,0,0,6"
                                               Content="拒绝不在此网格中的地址的 $A1（NRC $31）"
                                               IsChecked="{Binding RejectUnmappedDmr}"
-                                              ToolTip="When ticked, a $A1 SETUP_DMR whose RAM address has no row above is answered with NRC $31 RequestOutOfRange instead of binding the slot. Default off (accept any address) keeps PCMTec's datalog progressing; tick only if every address PCMTec polls is already mapped here, or its datalog won't start."/>
+                                              ToolTip="勾选时，RAM 地址在上方没有行的 $A1 SETUP_DMR 将以 NRC $31 RequestOutOfRange 回答，而不是绑定槽。默认关闭（接受任何地址）保持 PCMTec 数据记录进行；仅当 PCMTec 轮询的每个地址都已在此映射时才勾选，否则其数据记录不会启动。"/>
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal"
                                                 HorizontalAlignment="Right" Margin="0,0,0,6">
                                         <Button Width="30" Height="26" Padding="0" Margin="0,0,6,0"
@@ -1263,7 +1263,7 @@
                                      Grid.Row="0" Grid.Column="1" Margin="0,2"
                                      Text="{Binding FlowControlBlockSizeHex, UpdateSourceTrigger=LostFocus}"
                                      FontFamily="{StaticResource Font.Mono}"
-                                     ToolTip="ISO 15765-2 FlowControl BlockSize emitted on First Frame reception. 0x00 = unrestricted; 0x01 = one Consecutive Frame per FC cycle (needed by some testers, e.g. 6Speed.T43)."/>
+                                     ToolTip="首帧接收时发出的 ISO 15765-2 流控块大小。0x00 = 无限制；0x01 = 每个 FC 周期一个连续帧（某些测试仪需要，例如 6Speed.T43）。"/>
 
                             <!-- Diagnostic standard picker for THIS ECU.
                                  "GM Gen 4" = J1979 + GMW3110; "Ford" = the Ford
@@ -1340,7 +1340,7 @@
                                            FontWeight="SemiBold" FontSize="15"/>
                                 <Button Grid.Column="1" Width="28" Height="22" Padding="0" Margin="0,0,6,0"
                                         Command="{Binding LoadInfoFromBinCommand}"
-                                        ToolTip="Pick a GM ECU flash readback (.bin). Sets it as this ECU's identity source (prompts before overwriting $1A DIDs) and flash bin source (Service $23 reads).">
+                                        ToolTip="选择 GM ECU 闪存读回 (.bin)。将其设置为此 ECU 的标识源（覆盖 $1A DID 前提示）和闪存 bin 源（服务 $23 读取）。">
                                     <TextBlock Text="&#xE8E5;" FontFamily="Segoe MDL2 Assets" FontSize="14"
                                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Button>
@@ -1398,14 +1398,14 @@
                             <TextBox Grid.Row="11" Grid.Column="1" Margin="0,2"
                                      Text="{Binding ResponseDelayMs, UpdateSourceTrigger=LostFocus}"
                                      FontFamily="{StaticResource Font.Mono}"
-                                     ToolTip="Modelled processing time (ms) before every diagnostic response. 0 = instant. Above the active stack's P2 (GMW3110 150 ms / UDS 50 ms) the ECU emits 7F sid 78 ResponsePending heartbeats to P2* until it answers."/>
+                                     ToolTip="每个诊断响应前的模拟处理时间（ms）。0 = 即时。超过活动栈的 P2（GMW3110 150 ms / UDS 50 ms）时，ECU 发出 7F sid 78 ResponsePending 心跳到 P2* 直到回答。"/>
 
                             <Label Style="{StaticResource Label.FormPair}"
                                    Grid.Row="12" Grid.Column="0" Content="会话(ms)"/>
                             <TextBox Grid.Row="12" Grid.Column="1" Margin="0,2"
                                      Text="{Binding SessionTimeoutOverrideMs, UpdateSourceTrigger=LostFocus}"
                                      FontFamily="{StaticResource Font.Mono}"
-                                     ToolTip="Override (ms) for the diagnostic session (P3C / S3) timeout. 0 = use the active stack's default (GMW3110 P3Cnom 5000 ms / UDS S3 5000 ms)."/>
+                                     ToolTip="诊断会话（P3C / S3）超时的覆盖（ms）。0 = 使用活动栈的默认值（GMW3110 P3Cnom 5000 ms / UDS S3 5000 ms）。"/>
 
                             <CheckBox Grid.Row="13" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,2"
                                       Content="慢时发出 78 ResponsePending"
@@ -1422,7 +1422,7 @@
                             <CheckBox Grid.Row="15" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,2"
                                       Content="用零回答 RAM 读取"
                                       IsChecked="{Binding RamReadReturnsZeros}"
-                                      ToolTip="When ticked, a $23 ReadMemoryByAddress for an address past the loaded bin's length (RAM) returns a positive response padded with 0x00 bytes instead of NRC $31 RequestOutOfRange. Applies to every persona; addresses inside the bin still read the real bytes."/>
+                                      ToolTip="勾选时，超过已加载 bin 长度（RAM）的地址的 $23 ReadMemoryByAddress 返回填充 0x00 字节的肯定响应，而不是 NRC $31 RequestOutOfRange。适用于每个角色；bin 内的地址仍读取真实字节。"/>
 
                         </Grid>
                     </ScrollViewer>
