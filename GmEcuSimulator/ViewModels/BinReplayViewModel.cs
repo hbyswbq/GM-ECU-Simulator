@@ -124,7 +124,7 @@ public sealed class BinReplayViewModel : NotifyPropertyChangedBase
         }
         catch (Exception ex)
         {
-            MessageBox.Show(ex.Message, "Bin load failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(ex.Message, "Bin 加载失败", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

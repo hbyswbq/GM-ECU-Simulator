@@ -10,7 +10,7 @@
         xmlns:av="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="av"
-        Title="ECU Editor"
+        Title="ECU 编辑器"
         Icon="/Resources/app.ico"
         Height="720" Width="1100"
         MinHeight="480" MinWidth="760"
@@ -128,7 +128,7 @@
                   HorizontalAlignment="Stretch"
                   MouseRightButtonUp="OnColumnHeaderRightClick"
                   MouseLeftButtonDown="OnColumnHeaderLeftClick"
-                  ToolTip="Double-click to sort (toggles ascending/descending); right-click to sort or filter this column.">
+                  ToolTip="双击排序（切换升序/降序）；右键排序或筛选此列。">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
@@ -142,19 +142,19 @@
                                Margin="6,0,0,0" VerticalAlignment="Center"
                                Foreground="{DynamicResource Accent.PrimaryBrush}"
                                Visibility="{Binding IsSorted, Converter={StaticResource BoolToVis}}"
-                               ToolTip="This column is part of the sort order."/>
+                               ToolTip="此列是排序顺序的一部分。"/>
                     <TextBlock Text="{Binding SortPriorityText}"
                                FontSize="10" FontWeight="SemiBold"
                                Margin="1,0,0,0" VerticalAlignment="Center"
                                Foreground="{DynamicResource Accent.PrimaryBrush}"
                                Visibility="{Binding ShowSortPriority, Converter={StaticResource BoolToVis}}"
-                               ToolTip="Sort priority (1 = primary key)."/>
+                               ToolTip="排序优先级（1 = 主键）。"/>
                     <TextBlock Text="&#xE721;"
                                FontFamily="Segoe MDL2 Assets" FontSize="11"
                                Margin="6,0,0,0" VerticalAlignment="Center"
                                Foreground="{DynamicResource Accent.PrimaryBrush}"
                                Visibility="{Binding IsActive, Converter={StaticResource BoolToVis}}"
-                               ToolTip="A filter is active on this column."/>
+                               ToolTip="此列上有活动筛选器。"/>
                 </StackPanel>
                 <Popup Grid.Column="0" Grid.ColumnSpan="2"
                        IsOpen="{Binding IsOpen}"
@@ -164,26 +164,26 @@
                        PopupAnimation="Fade">
                     <Border Style="{StaticResource Card}" MinWidth="220" Margin="0,4,0,0">
                         <StackPanel>
-                            <Button Content="Sort Ascending"
+                            <Button Content="升序排序"
                                     HorizontalContentAlignment="Left"
                                     Command="{Binding SortAscendingCommand}"
                                     Margin="0,0,0,4"/>
-                            <Button Content="Sort Descending"
+                            <Button Content="降序排序"
                                     HorizontalContentAlignment="Left"
                                     Command="{Binding SortDescendingCommand}"
                                     Margin="0,0,0,4"/>
                             <!-- Removes just this column from the multi-level sort;
                                  hidden until the column is actually sorted. -->
-                            <Button Content="Clear Sort"
+                            <Button Content="清除排序"
                                     HorizontalContentAlignment="Left"
                                     Command="{Binding ClearSortCommand}"
                                     Visibility="{Binding IsSorted, Converter={StaticResource BoolToVis}}"
                                     Margin="0,0,0,8"/>
                             <Separator Margin="0,0,0,8"/>
-                            <TextBlock Text="Filter" Style="{StaticResource Caption14}" Margin="0,0,0,4"/>
+                            <TextBlock Text="筛选" Style="{StaticResource Caption14}" Margin="0,0,0,4"/>
                             <TextBox Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}"
                                      MinHeight="32" VerticalContentAlignment="Center"/>
-                            <Button Content="Clear Filter"
+                            <Button Content="清除筛选"
                                     HorizontalContentAlignment="Left"
                                     Command="{Binding ClearFilterCommand}"
                                     Margin="0,8,0,0"/>
@@ -214,7 +214,7 @@
                                FontWeight="Bold" FontSize="12"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
-                <TextBlock Text="ECU Editor"
+                <TextBlock Text="ECU 编辑器"
                            Style="{StaticResource Text.Body}"
                            Foreground="{DynamicResource Text.PrimaryBrush}"
                            FontWeight="SemiBold"
@@ -225,7 +225,7 @@
                 <Button x:Name="MinimizeBtn"
                         Style="{StaticResource Button.Chrome}"
                         Click="OnMinimizeClicked"
-                        ToolTip="Minimize">
+                        ToolTip="最小化">
                     <Path Data="{StaticResource Icon.Minimize}"
                           Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
                           StrokeThickness="1.2"
@@ -234,7 +234,7 @@
                 <Button x:Name="MaximizeBtn"
                         Style="{StaticResource Button.Chrome}"
                         Click="OnMaximizeClicked"
-                        ToolTip="Maximize">
+                        ToolTip="最大化">
                     <Path x:Name="MaxIcon"
                           Data="{StaticResource Icon.Maximize}"
                           Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
@@ -244,7 +244,7 @@
                 <Button x:Name="CloseBtn"
                         Style="{StaticResource Button.ChromeClose}"
                         Click="OnCloseWindowClicked"
-                        ToolTip="Close">
+                        ToolTip="关闭">
                     <Path Data="{StaticResource Icon.Close}"
                           Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
                           StrokeThickness="1.2"
@@ -290,7 +290,7 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="ECUs" Style="{StaticResource Text.SectionHeader}"
+                        <TextBlock Text="ECU 列表" Style="{StaticResource Text.SectionHeader}"
                                    Margin="0" VerticalAlignment="Center"/>
                         <TextBlock Grid.Column="1"
                                    Text="{Binding Ecus.Count, StringFormat=\{0\} configured}"
@@ -311,19 +311,19 @@
                     <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
                         <Button Width="28" Height="22" Padding="0" Margin="0,0,6,0"
                                 Command="{Binding SaveSetupEcuCommand}"
-                                ToolTip="Save the selected ECU (CAN IDs, security module, PIDs, waveforms) to a *.ecu.json file.">
+                                ToolTip="将所选 ECU（CAN ID、安全模块、PID、波形）保存到 *.ecu.json 文件。">
                             <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="14"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Button>
                         <Button Width="28" Height="22" Padding="0" Margin="0,0,6,0"
                                 Command="{Binding LoadEcuCommand}"
-                                ToolTip="Load an ECU from a *.ecu.json file and add it to the bus.">
+                                ToolTip="从 *.ecu.json 文件加载 ECU 并添加到总线。">
                             <TextBlock Text="&#xE8E5;" FontFamily="Segoe MDL2 Assets" FontSize="14"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Button>
                         <Button Width="28" Height="22" Padding="0" Margin="0,0,6,0"
                                 Command="{Binding AddEcuCommand}"
-                                ToolTip="Add a blank ECU at the next free OBD-II ID.">
+                                ToolTip="在下一个空闲 OBD-II ID 处添加空白 ECU。">
                             <Path Data="M 0,5 L 10,5 M 5,0 L 5,10"
                                   Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
                                   StrokeThickness="1.4"
@@ -332,7 +332,7 @@
                         </Button>
                         <Button Width="28" Height="22" Padding="0"
                                 Command="{Binding RemoveSetupEcuCommand}"
-                                ToolTip="Remove the selected ECU from the bus. Prompts for confirmation.">
+                                ToolTip="从总线移除所选 ECU。将提示确认。">
                             <Path Data="M 0,5 L 10,5"
                                   Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
                                   StrokeThickness="1.4"
@@ -389,7 +389,7 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="Selected ECU"
+                        <TextBlock Text="所选 ECU"
                                    Style="{StaticResource Text.Subtitle}"
                                    VerticalAlignment="Center"/>
                         <TextBlock Grid.Column="1"
@@ -398,7 +398,7 @@
                                    VerticalAlignment="Center"
                                    Margin="12,0,0,0"/>
                         <Button Grid.Column="2"
-                                Content="Edit prime..."
+                                Content="编辑加载..."
                                 Padding="10,4"
                                 Command="{Binding EditPrimeCommand}"
                                 Visibility="{Binding IsPrimed, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed, TargetNullValue=Collapsed}"
@@ -414,7 +414,7 @@
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="PIDs"
+                        <TextBlock Text="PID 列表"
                                    Style="{StaticResource Text.Subtitle}"
                                    VerticalAlignment="Center"/>
                         <TextBlock Grid.Column="1"
@@ -443,7 +443,7 @@
                                  mode sections; starts expanded since it is the primary per-ECU configuration. The
                                  ShowsProgrammingFields / ShowsSecurityModuleReadOnly visibility bindings reach the
                                  MainViewModel via the window DataContext, exactly as they did in the main window. -->
-                            <Expander Header="ECU settings" HeaderTemplate="{StaticResource ModeSectionHeader}"
+                            <Expander Header="ECU 设置" HeaderTemplate="{StaticResource ModeSectionHeader}"
                                       IsExpanded="True" Margin="0,0,0,10">
                                 <WrapPanel Orientation="Horizontal">
                                     <WrapPanel.Resources>
@@ -460,7 +460,7 @@
                                             <ColumnDefinition Width="96"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <Label Style="{StaticResource Label.FormPair}" Grid.Column="0" Content="Name"/>
+                                        <Label Style="{StaticResource Label.FormPair}" Grid.Column="0" Content="名称"/>
                                         <TextBox Grid.Column="1" Margin="0,2"
                                                  Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"/>
                                     </Grid>
@@ -470,7 +470,7 @@
                                             <ColumnDefinition Width="96"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <Label Style="{StaticResource Label.FormPair}" Grid.Column="0" Content="Req CAN"/>
+                                        <Label Style="{StaticResource Label.FormPair}" Grid.Column="0" Content="请求 CAN"/>
                                         <TextBox Grid.Column="1" Margin="0,2"
                                                  Text="{Binding PhysicalRequestCanIdHex, UpdateSourceTrigger=LostFocus}"
                                                  FontFamily="{StaticResource Font.Mono}"/>
@@ -481,7 +481,7 @@
                                             <ColumnDefinition Width="96"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <Label Style="{StaticResource Label.FormPair}" Grid.Column="0" Content="USDT resp"/>
+                                        <Label Style="{StaticResource Label.FormPair}" Grid.Column="0" Content="USDT 响应"/>
                                         <TextBox Grid.Column="1" Margin="0,2"
                                                  Text="{Binding UsdtResponseCanIdHex, UpdateSourceTrigger=LostFocus}"
                                                  FontFamily="{StaticResource Font.Mono}"/>
@@ -492,7 +492,7 @@
                                             <ColumnDefinition Width="96"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <Label Style="{StaticResource Label.FormPair}" Grid.Column="0" Content="UUDT resp"/>
+                                        <Label Style="{StaticResource Label.FormPair}" Grid.Column="0" Content="UUDT 响应"/>
                                         <TextBox Grid.Column="1" Margin="0,2"
                                                  Text="{Binding UudtResponseCanIdHex, UpdateSourceTrigger=LostFocus}"
                                                  FontFamily="{StaticResource Font.Mono}"/>
@@ -517,7 +517,7 @@
                                             <ColumnDefinition Width="96"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <Label Style="{StaticResource Label.FormPair}" Grid.Column="0" Content="Diag addr"/>
+                                        <Label Style="{StaticResource Label.FormPair}" Grid.Column="0" Content="诊断地址"/>
                                         <TextBox Grid.Column="1" Margin="0,2"
                                                  Text="{Binding DiagnosticAddressHex, UpdateSourceTrigger=LostFocus}"
                                                  FontFamily="{StaticResource Font.Mono}"
@@ -531,7 +531,7 @@
                                             <ColumnDefinition Width="96"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <Label Style="{StaticResource Label.FormPair}" Grid.Column="0" Content="Sec module"/>
+                                        <Label Style="{StaticResource Label.FormPair}" Grid.Column="0" Content="安全模块"/>
                                         <TextBox Grid.Column="1" Margin="0,2"
                                                  Text="{Binding SelectedSecurityModuleId, Mode=OneWay}"
                                                  IsReadOnly="True"
@@ -544,7 +544,7 @@
                                             <ColumnDefinition Width="96"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <Label Style="{StaticResource Label.FormPair}" Grid.Column="0" Content="Engine model"/>
+                                        <Label Style="{StaticResource Label.FormPair}" Grid.Column="0" Content="引擎模型"/>
                                         <ComboBox Grid.Column="1" Margin="0,2" Height="40"
                                                   ItemsSource="{Binding EngineModels}"
                                                   DisplayMemberPath="DisplayName"
@@ -558,7 +558,7 @@
                                             <ColumnDefinition Width="96"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <Label Style="{StaticResource Label.FormPair}" Grid.Column="0" Content="Scenario"/>
+                                        <Label Style="{StaticResource Label.FormPair}" Grid.Column="0" Content="场景"/>
                                         <ComboBox Grid.Column="1" Margin="0,2" Height="40"
                                                   ItemsSource="{Binding Scenarios}"
                                                   SelectedItem="{Binding SelectedScenario}"
@@ -576,12 +576,12 @@
                                  outer messages grid; selecting a message reveals its signals grid (row details) where
                                  each field maps to a live engine signal / constant. Import DBC / Save / Load reach the
                                  MainViewModel via the Window DataContext; Add / Remove message are EcuViewModel commands. -->
-                            <Expander Header="CAN Broadcast" HeaderTemplate="{StaticResource ModeSectionHeader}"
+                            <Expander Header="CAN 广播" HeaderTemplate="{StaticResource ModeSectionHeader}"
                                       IsExpanded="False" Margin="0,0,0,10">
                                 <DockPanel>
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal"
                                                 HorizontalAlignment="Right" Margin="0,0,0,6">
-                                        <Button Content="Import DBC..." Padding="10,4" Margin="0,0,6,0"
+                                        <Button Content="导入 DBC..." Padding="10,4" Margin="0,0,6,0"
                                                 Command="{Binding DataContext.ImportDbcCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
                                                 ToolTip="Parse a .dbc file, pick the transmitter + messages, and add them to this ECU's broadcast set."/>
                                         <Button Width="30" Height="26" Padding="0" Margin="0,0,6,0"
@@ -598,13 +598,13 @@
                                         </Button>
                                         <Button Width="30" Height="26" Padding="0" Margin="0,0,6,0"
                                                 Command="{Binding AddBroadcastCommand}"
-                                                ToolTip="Add a new broadcast message. Set its CAN ID, period and signals after.">
+                                                ToolTip="添加新的广播消息。之后设置其 CAN ID、周期和信号。">
                                             <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="14"
                                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Button>
                                         <Button Width="30" Height="26" Padding="0"
                                                 Command="{Binding RemoveBroadcastCommand}"
-                                                ToolTip="Remove the selected broadcast message.">
+                                                ToolTip="移除所选广播消息。">
                                             <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="14"
                                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Button>
@@ -642,18 +642,18 @@
                                                     </DataTemplate>
                                                 </DataGridTemplateColumn.CellTemplate>
                                             </DataGridTemplateColumn>
-                                            <DataGridCheckBoxColumn Header="On" Width="44"
+                                            <DataGridCheckBoxColumn Header="启用" Width="44"
                                                                     Binding="{Binding Enabled, UpdateSourceTrigger=PropertyChanged}"/>
                                             <DataGridTextColumn Header="CAN ID" Width="90"
                                                                 Binding="{Binding CanIdHex, UpdateSourceTrigger=LostFocus}"
                                                                 FontFamily="{StaticResource Font.Mono}"/>
-                                            <DataGridTextColumn Header="Name" Width="*" MinWidth="120"
+                                            <DataGridTextColumn Header="名称" Width="*" MinWidth="120"
                                                                 Binding="{Binding Name, UpdateSourceTrigger=LostFocus}"/>
                                             <DataGridTextColumn Header="DLC" Width="56"
                                                                 Binding="{Binding Dlc, UpdateSourceTrigger=LostFocus}"/>
-                                            <DataGridTextColumn Header="Period (ms)" Width="92"
+                                            <DataGridTextColumn Header="周期(ms)" Width="92"
                                                                 Binding="{Binding PeriodMs, UpdateSourceTrigger=LostFocus}"/>
-                                            <DataGridTextColumn Header="Signals" Width="64" IsReadOnly="True"
+                                            <DataGridTextColumn Header="信号" Width="64" IsReadOnly="True"
                                                                 Binding="{Binding SignalCount}"/>
                                         </DataGrid.Columns>
 
@@ -675,21 +675,21 @@
                                                                   GridLinesVisibility="Horizontal"
                                                                   MaxHeight="260">
                                                             <DataGrid.Columns>
-                                                                <DataGridTextColumn Header="Signal" Width="160"
+                                                                <DataGridTextColumn Header="信号" Width="160"
                                                                                     Binding="{Binding Name, UpdateSourceTrigger=LostFocus}"/>
-                                                                <DataGridTextColumn Header="Bit" Width="48"
+                                                                <DataGridTextColumn Header="位" Width="48"
                                                                                     Binding="{Binding StartBit, UpdateSourceTrigger=LostFocus}"/>
-                                                                <DataGridTextColumn Header="Len" Width="48"
+                                                                <DataGridTextColumn Header="长度" Width="48"
                                                                                     Binding="{Binding Length, UpdateSourceTrigger=LostFocus}"/>
-                                                                <DataGridTextColumn Header="Ord" Width="64" IsReadOnly="True"
+                                                                <DataGridTextColumn Header="字节序" Width="64" IsReadOnly="True"
                                                                                     Binding="{Binding ByteOrderLabel}"/>
-                                                                <DataGridTextColumn Header="Scale" Width="70"
+                                                                <DataGridTextColumn Header="比例" Width="70"
                                                                                     Binding="{Binding Scale, StringFormat=G, UpdateSourceTrigger=LostFocus}"/>
-                                                                <DataGridTextColumn Header="Offset" Width="64"
+                                                                <DataGridTextColumn Header="偏移" Width="64"
                                                                                     Binding="{Binding Offset, StringFormat=G, UpdateSourceTrigger=LostFocus}"/>
-                                                                <DataGridTextColumn Header="Unit" Width="56"
+                                                                <DataGridTextColumn Header="单位" Width="56"
                                                                                     Binding="{Binding Unit, UpdateSourceTrigger=LostFocus}"/>
-                                                                <DataGridTemplateColumn Header="Source" Width="150">
+                                                                <DataGridTemplateColumn Header="来源" Width="150">
                                                                     <DataGridTemplateColumn.CellTemplate>
                                                                         <DataTemplate>
                                                                             <ComboBox ItemsSource="{Binding SourceOptions}"
@@ -699,9 +699,9 @@
                                                                         </DataTemplate>
                                                                     </DataGridTemplateColumn.CellTemplate>
                                                                 </DataGridTemplateColumn>
-                                                                <DataGridTextColumn Header="Const" Width="64"
+                                                                <DataGridTextColumn Header="常量" Width="64"
                                                                                     Binding="{Binding Constant, StringFormat=G, UpdateSourceTrigger=LostFocus}"/>
-                                                                <DataGridTextColumn Header="Live" Width="70" IsReadOnly="True"
+                                                                <DataGridTextColumn Header="实时值" Width="70" IsReadOnly="True"
                                                                                     Binding="{Binding LiveValue}"/>
                                                             </DataGrid.Columns>
                                                         </DataGrid>
@@ -729,7 +729,7 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="Diagnostic PIDs"
+                                <TextBlock Text="诊断 PID"
                                            Style="{StaticResource Text.Subtitle}"
                                            VerticalAlignment="Center"/>
                                 <!--<TextBlock Grid.Column="1"
@@ -757,8 +757,8 @@
                                     <Button Padding="10,4" Margin="0,0,6,0"
                                             VerticalAlignment="Center"
                                             Command="{Binding SeedDefaultPidsCommand}"
-                                            Content="Seed default PIDs"
-                                            ToolTip="Add the curated default PID set (baseline $1A identity DIDs + the 13 live $22 PIDs) to this ECU. Opt-in: seeding no longer happens automatically, so deleted rows do not reappear on reload. Existing rows are never overwritten; disabled for DPS-primed ECUs."/>
+                                            Content="植入默认 PID"
+                                            ToolTip="将精选的默认 PID 集（基线 $1A 标识 DID + 13 个实时 $22 PID）添加到此 ECU。可选：植入不再自动发生，因此删除的行不会在重新加载时重新出现。现有行永远不会被覆盖；DPS 加载的 ECU 禁用。"/>
                                     <Button Style="{StaticResource IconButton}"
                                             Command="{Binding DataContext.SavePidsCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
                                             ToolTip="Save this ECU's $1A/$22/$2D PID list (including waveform settings) to a .pids.json file. Does not include ECU settings or CAN broadcasts - use the sidebar's Save ECU for the whole ECU.">
@@ -791,7 +791,7 @@
                                           GridLinesVisibility="Horizontal"
                                           MaxHeight="320">
                                     <DataGrid.Columns>
-                                        <DataGridTemplateColumn Header="On" Width="44">
+                                        <DataGridTemplateColumn Header="启用" Width="44">
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate>
                                                     <CheckBox IsChecked="{Binding Supported, UpdateSourceTrigger=PropertyChanged}"
@@ -801,11 +801,11 @@
                                             </DataGridTemplateColumn.CellTemplate>
                                         </DataGridTemplateColumn>
                                         <DataGridTextColumn Header="PID"   Binding="{Binding PidHex}"  Width="64"  IsReadOnly="True"/>
-                                        <DataGridTextColumn Header="Name"    Binding="{Binding Name}"    Width="200" IsReadOnly="True"/>
-                                        <DataGridTextColumn Header="Bytes"   Binding="{Binding Bytes}"   Width="60"  IsReadOnly="True"/>
-                                        <DataGridTextColumn Header="Raw"     Binding="{Binding RawHex}"  Width="84"  IsReadOnly="True"
+                                        <DataGridTextColumn Header="名称"    Binding="{Binding Name}"    Width="200" IsReadOnly="True"/>
+                                        <DataGridTextColumn Header="字节"   Binding="{Binding Bytes}"   Width="60"  IsReadOnly="True"/>
+                                        <DataGridTextColumn Header="原始值"     Binding="{Binding RawHex}"  Width="84"  IsReadOnly="True"
                                                             FontFamily="{StaticResource Font.Mono}"/>
-                                        <DataGridTextColumn Header="Decoded" Binding="{Binding Decoded}" Width="*" MinWidth="140" IsReadOnly="True"/>
+                                        <DataGridTextColumn Header="解码值" Binding="{Binding Decoded}" Width="*" MinWidth="140" IsReadOnly="True"/>
                                     </DataGrid.Columns>
                                 </DataGrid>
                             </Expander>
@@ -827,14 +827,14 @@
                                                             HorizontalAlignment="Right" Margin="0,0,0,6">
                                                     <Button Width="30" Height="26" Padding="0" Margin="0,0,6,0"
                                                             Command="{Binding AddCommand}"
-                                                            ToolTip="Add a new row to this mode. The address auto-picks the next free byte range; rename and re-point it after.">
+                                                            ToolTip="在此模式下添加新行。地址自动选择下一个空闲字节范围；之后重命名和重新指向。">
                                                         <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="14"
                                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                     </Button>
                                                     <Button Width="30" Height="26" Padding="0"
                                                             Command="{Binding RemoveCommand}"
                                                             CommandParameter="{Binding SelectedItems, ElementName=SectionPidGrid}"
-                                                            ToolTip="Remove the selected row(s) in this section. Ctrl/Shift-click to select multiple rows first.">
+                                                            ToolTip="移除此部分中所选的行。先按 Ctrl/Shift 点击选择多行。">
                                                         <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="14"
                                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                     </Button>
@@ -918,7 +918,7 @@
                                                              part numbers, ...). ASCII when printable, "0x..." hex otherwise. Edit as
                                                              text, or prefix "0x" to enter raw bytes; editing resizes the row to match. -->
                                                         <DataGridTextColumn Binding="{Binding ValueText, UpdateSourceTrigger=LostFocus}" Width="*" MinWidth="170"
-                                                                            Header="Value"
+                                                                            Header="值"
                                                                             Visibility="{Binding Data.IsNotMode22, Source={StaticResource SecProxy}, Converter={StaticResource BoolToVis}}"
                                                                             FontFamily="{StaticResource Font.Mono}"
                                                                             ElementStyle="{StaticResource DataGrid.TextColumnElement}"
@@ -987,7 +987,7 @@
                                                                             Header="{Binding Data.UnitColumnFilter, Source={StaticResource SecProxy}}"
                                                                             ElementStyle="{StaticResource DataGrid.TextColumnElement}"
                                                                             EditingElementStyle="{StaticResource MaterialDesignDataGridTextColumnPopupEditingStyle}"/>
-                                                        <DataGridTextColumn Header="Live"   Binding="{Binding LiveValue}" IsReadOnly="True" Width="90"
+                                                        <DataGridTextColumn Header="实时值"   Binding="{Binding LiveValue}" IsReadOnly="True" Width="90"
                                                                             Visibility="{Binding Data.IsNotMode1A, Source={StaticResource SecProxy}, Converter={StaticResource BoolToVis}}"
                                                                             ElementStyle="{StaticResource DataGrid.TextColumnElement}"/>
                                                     </DataGrid.Columns>
@@ -1011,20 +1011,20 @@
                                     <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Opacity="0.7" Margin="0,0,0,6"
                                                Text="Map a DMR RAM address (the value PCMTec reads back during a datalog) to an engine-simulator signal. The Ford persona writes the mapped signal as a big-endian float into that slot's 0x6A0 stream; unmapped addresses default to Engine RPM."/>
                                     <CheckBox DockPanel.Dock="Top" Margin="0,0,0,6"
-                                              Content="Reject $A1 for addresses not in this grid (NRC $31)"
+                                              Content="拒绝不在此网格中的地址的 $A1（NRC $31）"
                                               IsChecked="{Binding RejectUnmappedDmr}"
                                               ToolTip="When ticked, a $A1 SETUP_DMR whose RAM address has no row above is answered with NRC $31 RequestOutOfRange instead of binding the slot. Default off (accept any address) keeps PCMTec's datalog progressing; tick only if every address PCMTec polls is already mapped here, or its datalog won't start."/>
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal"
                                                 HorizontalAlignment="Right" Margin="0,0,0,6">
                                         <Button Width="30" Height="26" Padding="0" Margin="0,0,6,0"
                                                 Command="{Binding AddDmrMappingCommand}"
-                                                ToolTip="Add a DMR address -> signal mapping.">
+                                                ToolTip="添加 DMR 地址 -> 信号映射。">
                                             <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" FontSize="14"
                                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Button>
                                         <Button Width="30" Height="26" Padding="0"
                                                 Command="{Binding RemoveDmrMappingCommand}"
-                                                ToolTip="Remove the selected mapping.">
+                                                ToolTip="移除所选映射。">
                                             <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="14"
                                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Button>
@@ -1041,12 +1041,12 @@
                                               GridLinesVisibility="Horizontal"
                                               MaxHeight="320">
                                         <DataGrid.Columns>
-                                            <DataGridTextColumn Header="DMR Address" Width="120"
+                                            <DataGridTextColumn Header="DMR 地址" Width="120"
                                                                 Binding="{Binding AddressHex, UpdateSourceTrigger=LostFocus}"
                                                                 FontFamily="{StaticResource Font.Mono}"/>
-                                            <DataGridTextColumn Header="Name" Width="*" MinWidth="90"
+                                            <DataGridTextColumn Header="名称" Width="*" MinWidth="90"
                                                                 Binding="{Binding Name, UpdateSourceTrigger=LostFocus}"/>
-                                            <DataGridTemplateColumn Header="Engine Signal" Width="180">
+                                            <DataGridTemplateColumn Header="引擎信号" Width="180">
                                                 <DataGridTemplateColumn.CellTemplate>
                                                     <DataTemplate>
                                                         <ComboBox ItemsSource="{Binding SignalOptions}"
@@ -1057,7 +1057,7 @@
                                                     </DataTemplate>
                                                 </DataGridTemplateColumn.CellTemplate>
                                             </DataGridTemplateColumn>
-                                            <DataGridTemplateColumn Header="Encoding" Width="110">
+                                            <DataGridTemplateColumn Header="编码" Width="110">
                                                 <DataGridTemplateColumn.CellTemplate>
                                                     <DataTemplate>
                                                         <ComboBox ItemsSource="{Binding EncodingOptions}"
@@ -1067,9 +1067,9 @@
                                                     </DataTemplate>
                                                 </DataGridTemplateColumn.CellTemplate>
                                             </DataGridTemplateColumn>
-                                            <DataGridTextColumn Header="Scale" Width="70"
+                                            <DataGridTextColumn Header="比例" Width="70"
                                                                 Binding="{Binding Scale, StringFormat=G, UpdateSourceTrigger=LostFocus}"/>
-                                            <DataGridTextColumn Header="Offset" Width="70"
+                                            <DataGridTextColumn Header="偏移" Width="70"
                                                                 Binding="{Binding Offset, StringFormat=G, UpdateSourceTrigger=LostFocus}"/>
                                         </DataGrid.Columns>
                                     </DataGrid>
@@ -1097,11 +1097,11 @@
                     DataContext="{Binding SetupSelectedEcu.SelectedPid.Waveform}">
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Top"
-                               Text="Waveform"
+                               Text="波形"
                                Style="{StaticResource Text.Subtitle}"
                                Margin="0,0,0,12"/>
                     <TextBlock DockPanel.Dock="Top"
-                               Text="Generator for the selected PID."
+                               Text="所选 PID 的生成器。"
                                Style="{StaticResource Hint14}"
                                Margin="0,-4,0,12"/>
 
@@ -1123,38 +1123,38 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <Label Style="{StaticResource Label.FormPair}" Grid.Row="0" Grid.Column="0" Content="Shape"/>
+                            <Label Style="{StaticResource Label.FormPair}" Grid.Row="0" Grid.Column="0" Content="形状"/>
                             <ComboBox Grid.Row="0" Grid.Column="1" Margin="0,2"
                                       ItemsSource="{Binding Source={StaticResource WaveformShapes}}"
                                       SelectedItem="{Binding Shape, UpdateSourceTrigger=PropertyChanged}"/>
 
-                            <Label Style="{StaticResource Label.FormPair}" Grid.Row="1" Grid.Column="0" Content="Amplitude"
+                            <Label Style="{StaticResource Label.FormPair}" Grid.Row="1" Grid.Column="0" Content="振幅"
                                    Visibility="{Binding SupportsAmplitude, Converter={StaticResource BoolToVis}}"/>
                             <TextBox Grid.Row="1" Grid.Column="1" Margin="0,2"
                                      Text="{Binding Amplitude, StringFormat=G, UpdateSourceTrigger=LostFocus}"
                                      Visibility="{Binding SupportsAmplitude, Converter={StaticResource BoolToVis}}"
                                      FontFamily="{StaticResource Font.Mono}"/>
 
-                            <Label Style="{StaticResource Label.FormPair}" Grid.Row="2" Grid.Column="0" Content="Offset"/>
+                            <Label Style="{StaticResource Label.FormPair}" Grid.Row="2" Grid.Column="0" Content="偏移"/>
                             <TextBox Grid.Row="2" Grid.Column="1" Margin="0,2"
                                      Text="{Binding Offset, StringFormat=G, UpdateSourceTrigger=LostFocus}"
                                      FontFamily="{StaticResource Font.Mono}"/>
 
-                            <Label Style="{StaticResource Label.FormPair}" Grid.Row="3" Grid.Column="0" Content="Freq (Hz)"
+                            <Label Style="{StaticResource Label.FormPair}" Grid.Row="3" Grid.Column="0" Content="频率(Hz)"
                                    Visibility="{Binding SupportsFrequency, Converter={StaticResource BoolToVis}}"/>
                             <TextBox Grid.Row="3" Grid.Column="1" Margin="0,2"
                                      Text="{Binding FrequencyHz, StringFormat=G, UpdateSourceTrigger=LostFocus}"
                                      Visibility="{Binding SupportsFrequency, Converter={StaticResource BoolToVis}}"
                                      FontFamily="{StaticResource Font.Mono}"/>
 
-                            <Label Style="{StaticResource Label.FormPair}" Grid.Row="4" Grid.Column="0" Content="Phase (°)"
+                            <Label Style="{StaticResource Label.FormPair}" Grid.Row="4" Grid.Column="0" Content="相位(°)"
                                    Visibility="{Binding SupportsFrequency, Converter={StaticResource BoolToVis}}"/>
                             <TextBox Grid.Row="4" Grid.Column="1" Margin="0,2"
                                      Text="{Binding PhaseDeg, StringFormat=G, UpdateSourceTrigger=LostFocus}"
                                      Visibility="{Binding SupportsFrequency, Converter={StaticResource BoolToVis}}"
                                      FontFamily="{StaticResource Font.Mono}"/>
 
-                            <Label Style="{StaticResource Label.FormPair}" Grid.Row="5" Grid.Column="0" Content="Duty (0..1)"
+                            <Label Style="{StaticResource Label.FormPair}" Grid.Row="5" Grid.Column="0" Content="占空比(0..1)"
                                    Visibility="{Binding SupportsDuty, Converter={StaticResource BoolToVis}}"/>
                             <TextBox Grid.Row="5" Grid.Column="1" Margin="0,2"
                                      Text="{Binding DutyCycle, StringFormat=G, UpdateSourceTrigger=LostFocus}"
@@ -1167,7 +1167,7 @@
                                  column B numeric, optional header tolerated).
                                  The display label collapses long paths to the
                                  file name so the inspector stays readable. -->
-                            <Label Style="{StaticResource Label.FormPair}" Grid.Row="6" Grid.Column="0" Content="CSV file"
+                            <Label Style="{StaticResource Label.FormPair}" Grid.Row="6" Grid.Column="0" Content="CSV 文件"
                                    Visibility="{Binding SupportsCsv, Converter={StaticResource BoolToVis}}"/>
                             <Grid Grid.Row="6" Grid.Column="1" Margin="0,2"
                                   Visibility="{Binding SupportsCsv, Converter={StaticResource BoolToVis}}">
@@ -1183,14 +1183,14 @@
                                            TextTrimming="CharacterEllipsis"
                                            FontFamily="{StaticResource Font.Mono}"/>
                                 <Button Grid.Column="1" Margin="6,0,0,0" Padding="8,2"
-                                        Content="Browse..."
+                                        Content="浏览..."
                                         Command="{Binding PickCsvFileCommand}"/>
                                 <Button Grid.Column="2" Margin="4,0,0,0" Padding="8,2"
-                                        Content="Clear"
+                                        Content="清除"
                                         Command="{Binding ClearCsvFileCommand}"/>
                             </Grid>
 
-                            <Label Style="{StaticResource Label.FormPair}" Grid.Row="7" Grid.Column="0" Content="On end"
+                            <Label Style="{StaticResource Label.FormPair}" Grid.Row="7" Grid.Column="0" Content="结束时"
                                    Visibility="{Binding SupportsCsv, Converter={StaticResource BoolToVis}}"/>
                             <ComboBox Grid.Row="7" Grid.Column="1" Margin="0,2"
                                       ItemsSource="{Binding Source={StaticResource CsvLoopModes}}"
@@ -1213,11 +1213,11 @@
                     DataContext="{Binding SetupSelectedEcu}">
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Top"
-                               Text="Advanced"
+                               Text="高级"
                                Style="{StaticResource Text.Subtitle}"
                                Margin="0,0,0,12"/>
                     <TextBlock DockPanel.Dock="Top"
-                               Text="Per-ECU diagnostic-stack settings."
+                               Text="每个 ECU 的诊断栈设置。"
                                Style="{StaticResource Hint14}"
                                Margin="0,-4,0,12"/>
 
@@ -1274,13 +1274,13 @@
                                  security state - it does NOT touch the other ECUs
                                  on the bus. Persisted per-ECU via EcuDto.PersonaId. -->
                             <Label Style="{StaticResource Label.FormPair}"
-                                   Grid.Row="1" Grid.Column="0" Content="Persona"/>
+                                   Grid.Row="1" Grid.Column="0" Content="角色"/>
                             <ComboBox Grid.Row="1" Grid.Column="1" Margin="0,2"
                                       Height="{Binding ActualHeight, ElementName=AdvancedFcBsTextBox}"
                                       ItemsSource="{Binding AvailablePersonas}"
                                       SelectedItem="{Binding SelectedPersonaOption}"
                                       DisplayMemberPath="Label"
-                                      ToolTip="Diagnostic dispatch table this ECU presents on the wire. GM Gen 4 = the GMW3110 stack; Ford = the Ford UDS (PCMTec) dispatcher. Applies to this ECU only and resets its security state."/>
+                                      ToolTip="此 ECU 在总线上呈现的诊断调度表。GM Gen 4 = GMW3110 栈；Ford = Ford UDS (PCMTec) 调度器。仅适用于此 ECU 并重置其安全状态。"/>
 
                             <!-- $27 SecurityAccess module picker. Identical
                                  wiring to the MainWindow Selected-ECU pane's
@@ -1291,13 +1291,13 @@
                                  swaps the live module + resets security state.
                                  "(none)" makes $27 return NRC $11. -->
                             <Label Style="{StaticResource Label.FormPair}"
-                                   Grid.Row="2" Grid.Column="0" Content="Sec module"/>
+                                   Grid.Row="2" Grid.Column="0" Content="安全模块"/>
                             <ComboBox Grid.Row="2" Grid.Column="1" Margin="0,2"
                                       Height="{Binding ActualHeight, ElementName=AdvancedFcBsTextBox}"
                                       ItemsSource="{Binding AvailableSecurityModuleIds}"
                                       SelectedItem="{Binding SelectedSecurityModuleId}"
                                       FontFamily="{StaticResource Font.Mono}"
-                                      ToolTip="Seed/key algorithm for this ECU. (none) makes $27 return NRC $11. Picking an entry rebuilds the security module and clears any prior unlock / lockout state."/>
+                                      ToolTip="此 ECU 的种子/密钥算法。(无) 使 $27 返回 NRC $11。选择条目会重建安全模块并清除任何先前的解锁/锁定状态。"/>
 
                             <!-- $35/$36 flash-READ dialect picker for THIS ECU. GM persona only
                                  (hidden for Ford). "E38 / E67" answers PowerPCM_Flasher's native
@@ -1307,7 +1307,7 @@
                                  knob (no security / dispatch reset). Persisted via EcuDto.ReadFamily.
                                  Both cells collapse under the Ford persona so no empty row shows. -->
                             <Label Style="{StaticResource Label.FormPair}"
-                                   Grid.Row="3" Grid.Column="0" Content="Read as"
+                                   Grid.Row="3" Grid.Column="0" Content="读取为"
                                    Visibility="{Binding IsGmPersona, Converter={StaticResource BoolToVis}}"/>
                             <ComboBox Grid.Row="3" Grid.Column="1" Margin="0,2"
                                       Height="{Binding ActualHeight, ElementName=AdvancedFcBsTextBox}"
@@ -1315,7 +1315,7 @@
                                       ItemsSource="{Binding AvailableReadFamilies}"
                                       SelectedItem="{Binding SelectedReadFamily}"
                                       DisplayMemberPath="Label"
-                                      ToolTip="Which flash-READ protocol this ECU answers on $35/$36. E38 / E67 = PowerPCM_Flasher native upload; T43 = the 6Speed.T43 read-kernel ($99 handshake + $35 multi-frame blocks). Applies to this ECU only."/>
+                                      ToolTip="此 ECU 在 $35/$36 上响应的闪存读取协议。E38 / E67 = PowerPCM_Flasher 原生上传；T43 = 6Speed.T43 读取内核（$99 握手 + $35 多帧块）。仅适用于此 ECU。"/>
 
                             <!-- Divider splitting the diagnostic-stack knobs above from the Bin sub-section
                                  below. Spans both columns; extra top margin opens a gap from the Sec module row. -->
@@ -1346,7 +1346,7 @@
                                 </Button>
                                 <Button Grid.Column="2" Width="28" Height="22" Padding="0"
                                         Command="{Binding ClearBinCommand}"
-                                        ToolTip="Forget the selected bin: clears the flash source and the name shown. Already-loaded identity DIDs are kept.">
+                                        ToolTip="忘记所选 bin：清除闪存源和显示的名称。已加载的标识 DID 保留。">
                                     <TextBlock Text="&#xE894;" FontFamily="Segoe MDL2 Assets" FontSize="14"
                                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Button>
@@ -1370,19 +1370,19 @@
                                     Style="{StaticResource SectionDivider}" Margin="0,16,0,10"/>
 
                             <Label Style="{StaticResource Label.FormPair}"
-                                   Grid.Row="8" Grid.Column="0" Content="Xfer ms"/>
+                                   Grid.Row="8" Grid.Column="0" Content="传输(ms)"/>
                             <TextBox x:Name="AdvancedFlashXferTextBox"
                                      Grid.Row="8" Grid.Column="1" Margin="0,2"
                                      Text="{Binding FlashTransferDelayMs, UpdateSourceTrigger=LostFocus}"
                                      FontFamily="{StaticResource Font.Mono}"
-                                     ToolTip="Per-block delay (ms) before each $36 TransferData reply, to model real flash-program time. 0 = instant. ~30 ms over ~960 blocks gives a ~30 s write. Keep under ~2 s or the tester read-times-out."/>
+                                     ToolTip="每个 $36 TransferData 回复前的每块延迟（ms），用于模拟真实闪存编程时间。0 = 即时。~960 块上约 30 ms 给出约 30 秒的写入。保持在约 2 秒以下，否则测试仪读取超时。"/>
 
                             <Label Style="{StaticResource Label.FormPair}"
-                                   Grid.Row="9" Grid.Column="0" Content="Erase ms"/>
+                                   Grid.Row="9" Grid.Column="0" Content="擦除(ms)"/>
                             <TextBox Grid.Row="9" Grid.Column="1" Margin="0,2"
                                      Text="{Binding FlashEraseDelayMs, UpdateSourceTrigger=LostFocus}"
                                      FontFamily="{StaticResource Font.Mono}"
-                                     ToolTip="Modelled erase time (ms). The erase positive response is simply deferred by this much - the ECU goes quiet then answers when done (no ResponsePending; PCMTec rejects a pending reply to the $B1 erase). 0 = instant."/>
+                                     ToolTip="模拟擦除时间（ms）。擦除肯定响应只是延迟这么多 - ECU 静默然后在完成时回答（无 ResponsePending；PCMTec 拒绝 $B1 擦除的挂起回复）。0 = 即时。"/>
 
                             <!-- Response-timing knobs. Resp ms models the time THIS ECU
                                  takes to answer (0 = instant). When it exceeds the active
@@ -1394,23 +1394,23 @@
                                     Style="{StaticResource SectionDivider}" Margin="0,16,0,10"/>
 
                             <Label Style="{StaticResource Label.FormPair}"
-                                   Grid.Row="11" Grid.Column="0" Content="Resp ms"/>
+                                   Grid.Row="11" Grid.Column="0" Content="响应(ms)"/>
                             <TextBox Grid.Row="11" Grid.Column="1" Margin="0,2"
                                      Text="{Binding ResponseDelayMs, UpdateSourceTrigger=LostFocus}"
                                      FontFamily="{StaticResource Font.Mono}"
                                      ToolTip="Modelled processing time (ms) before every diagnostic response. 0 = instant. Above the active stack's P2 (GMW3110 150 ms / UDS 50 ms) the ECU emits 7F sid 78 ResponsePending heartbeats to P2* until it answers."/>
 
                             <Label Style="{StaticResource Label.FormPair}"
-                                   Grid.Row="12" Grid.Column="0" Content="Sess ms"/>
+                                   Grid.Row="12" Grid.Column="0" Content="会话(ms)"/>
                             <TextBox Grid.Row="12" Grid.Column="1" Margin="0,2"
                                      Text="{Binding SessionTimeoutOverrideMs, UpdateSourceTrigger=LostFocus}"
                                      FontFamily="{StaticResource Font.Mono}"
                                      ToolTip="Override (ms) for the diagnostic session (P3C / S3) timeout. 0 = use the active stack's default (GMW3110 P3Cnom 5000 ms / UDS S3 5000 ms)."/>
 
                             <CheckBox Grid.Row="13" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,2"
-                                      Content="Emit 78 ResponsePending when slow"
+                                      Content="慢时发出 78 ResponsePending"
                                       IsChecked="{Binding Emit78WhenSlow}"
-                                      ToolTip="When ticked (default), a response slower than P2 is preceded by 7F sid 78 RequestCorrectlyReceived-ResponsePending to hold the tester open to P2*. Untick to model an ECU that just goes quiet then answers - some hosts reject a pending reply (e.g. PCMTec on the $B1 erase)."/>
+                                      ToolTip="勾选时（默认），慢于 P2 的响应前面会有 7F sid 78 RequestCorrectlyReceived-ResponsePending 以保持测试仪打开到 P2*。取消勾选以模拟一个静默然后回答的 ECU - 某些主机拒绝挂起回复（例如 PCMTec 对 $B1 擦除）。"/>
 
                             <!-- RAM-read fallback. When ticked, a $23 ReadMemoryByAddress that
                                  targets an address beyond the loaded bin (RAM) is answered with a
@@ -1420,7 +1420,7 @@
                                     Style="{StaticResource SectionDivider}" Margin="0,16,0,10"/>
 
                             <CheckBox Grid.Row="15" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,2"
-                                      Content="Answer RAM reads with zeros"
+                                      Content="用零回答 RAM 读取"
                                       IsChecked="{Binding RamReadReturnsZeros}"
                                       ToolTip="When ticked, a $23 ReadMemoryByAddress for an address past the loaded bin's length (RAM) returns a positive response padded with 0x00 bytes instead of NRC $31 RequestOutOfRange. Applies to every persona; addresses inside the bin still read the real bytes."/>
 

@@ -128,7 +128,7 @@
                         <Ellipse Width="8" Height="8" Margin="0,0,8,0"
                                  Fill="{Binding SecurityStatusText, Converter={StaticResource StatusToBrush}, FallbackValue={x:Null}, TargetNullValue={x:Null}}"
                                  VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding SecurityPillText, FallbackValue='No ECU primed', TargetNullValue='No ECU primed'}"
+                        <TextBlock Text="{Binding SecurityPillText, FallbackValue='未加载 ECU', TargetNullValue='No ECU primed'}"
                                    Style="{StaticResource Text.Caption}"
                                    Foreground="{DynamicResource Text.PrimaryBrush}"
                                    VerticalAlignment="Center"/>
@@ -164,7 +164,7 @@
                 <Button x:Name="MinimizeBtn"
                         Style="{StaticResource Button.Chrome}"
                         Click="OnMinimizeClicked"
-                        ToolTip="Minimize">
+                        ToolTip="最小化">
                     <Path Data="{StaticResource Icon.Minimize}"
                           Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
                           StrokeThickness="1.2"
@@ -173,7 +173,7 @@
                 <Button x:Name="MaximizeBtn"
                         Style="{StaticResource Button.Chrome}"
                         Click="OnMaximizeClicked"
-                        ToolTip="Maximize">
+                        ToolTip="最大化">
                     <Path x:Name="MaxIcon"
                           Data="{StaticResource Icon.Maximize}"
                           Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
@@ -183,7 +183,7 @@
                 <Button x:Name="CloseBtn"
                         Style="{StaticResource Button.ChromeClose}"
                         Click="OnCloseWindowClicked"
-                        ToolTip="Close">
+                        ToolTip="关闭">
                     <Path Data="{StaticResource Icon.Close}"
                           Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type Button}}}"
                           StrokeThickness="1.2"
@@ -209,42 +209,42 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <Menu Grid.Column="0" Padding="6,2" Background="Transparent">
-                <MenuItem Header="_File">
-                    <MenuItem Header="_New"      Command="{Binding NewCommand}"    InputGestureText="Ctrl+N"/>
-                    <MenuItem Header="_Open…"    Command="{Binding OpenCommand}"   InputGestureText="Ctrl+O"/>
+                <MenuItem Header="文件(_F)">
+                    <MenuItem Header="新建(_N)"      Command="{Binding NewCommand}"    InputGestureText="Ctrl+N"/>
+                    <MenuItem Header="打开…(_O)"    Command="{Binding OpenCommand}"   InputGestureText="Ctrl+O"/>
                     <Separator/>
-                    <MenuItem Header="_Save"     Command="{Binding SaveCommand}"   InputGestureText="Ctrl+S"/>
-                    <MenuItem Header="Save _As…" Command="{Binding SaveAsCommand}" InputGestureText="Ctrl+Shift+S"/>
+                    <MenuItem Header="保存(_S)"     Command="{Binding SaveCommand}"   InputGestureText="Ctrl+S"/>
+                    <MenuItem Header="另存为…(_A)" Command="{Binding SaveAsCommand}" InputGestureText="Ctrl+Shift+S"/>
                     <Separator Visibility="{Binding ShowsPrimeMenu, Converter={StaticResource BoolToVis}}"/>
-                    <MenuItem Header="C_lear primed archive"    Command="{Binding ClearPrimeArchiveCommand}"
+                    <MenuItem Header="清除已加载的存档(_L)"    Command="{Binding ClearPrimeArchiveCommand}"
                               Visibility="{Binding ShowsPrimeMenu, Converter={StaticResource BoolToVis}}"
                               ToolTip="Forget the persisted prime path. Does not remove ECUs from the current bus."/>
                     <Separator/>
-                    <MenuItem Header="E_xit"     Click="OnExitClicked"/>
+                    <MenuItem Header="退出(_X)"     Click="OnExitClicked"/>
                 </MenuItem>
-                <MenuItem Header="_J2534">
-                    <MenuItem Header="_Register as J2534 device…"
+                <MenuItem Header="J2534(_J)">
+                    <MenuItem Header="注册为 J2534 设备…(_R)"
                               Command="{Binding RegisterJ2534Command}"
                               ToolTip="Writes HKLM\SOFTWARE\PassThruSupport.04.04\GmEcuSim. Triggers a UAC prompt."/>
-                    <MenuItem Header="_Unregister"
+                    <MenuItem Header="取消注册(_U)"
                               Command="{Binding UnregisterJ2534Command}"
                               ToolTip="Removes only the GmEcuSim entry; never touches other vendors. Triggers a UAC prompt."/>
                     <Separator/>
-                    <MenuItem Header="_Show registered devices…"
+                    <MenuItem Header="显示已注册设备…(_S)"
                               Command="{Binding ShowRegisteredDevicesCommand}"
                               ToolTip="Lists every J2534 device on this machine in both registry views. Read-only - no UAC."/>
                     <Separator/>
-                    <MenuItem Header="Reset _IPC pipe"
+                    <MenuItem Header="重置 IPC 管道(_I)"
                               Command="{Binding ResetIpcPipeCommand}"
                               ToolTip="Stop and restart the \\.\pipe\GmEcuSim.PassThru server. Any connected host sees a broken pipe on its next call; new PassThruOpen calls succeed again. No UAC."/>
                     <Separator/>
-                    <MenuItem Header="Drive HW _$3E keepalives"
+                    <MenuItem Header="驱动硬件 $3E 保活(_H)"
                               IsCheckable="True"
                               StaysOpenOnClick="True"
                               IsChecked="{Binding AllowPeriodicTesterPresent, Mode=TwoWay}"
                               ToolTip="When on, the simulator drives $3E TesterPresent on the host's behalf for any frame registered via PassThruStartPeriodicMsg. Off accepts the registration but skips the tick - delegating hosts have to keep their own P3C session alive."/>
                 </MenuItem>
-                <MenuItem Header="_ECU">
+                <MenuItem Header="ECU(_E)">
                     <!-- Per-ECU Save / Load moved to the ECU Editor window's
                          toolbar (was: PID Setup). Same commands are still on
                          MainViewModel; only the menu surface here was retired
@@ -256,11 +256,11 @@
                          retired ECU sidebar. Always visible regardless of
                          simulator mode so the editor stays one click away
                          even while DPS / Flash Tool flows are running. -->
-                    <MenuItem Header="Open ECU _settings…"
+                    <MenuItem Header="打开 ECU 设置…(_S)"
                               Command="{Binding OpenSetupWindowCommand}"
                               ToolTip="Open the ECU Editor. Add / remove / save / load ECUs from there too."/>
                     <Separator/>
-                    <MenuItem Header="Reset _ECU State"
+                    <MenuItem Header="重置 ECU 状态(_R)"
                               Command="{Binding ResetStateCommand}"
                               ToolTip="Power-cycle every ECU: clears the programming session, security unlock, download buffer, and DPID schedules. Equivalent to $20 ReturnToNormalMode + full $27 re-lock applied to each ECU on the bus."/>
                 </MenuItem>
@@ -269,48 +269,48 @@
                      'Add blank ECU' here keeps the legacy synthetic-defaults
                      path available for tests, quick setups, and DPS-free
                      debugging where a real readback isn't to hand. -->
-                <MenuItem Header="_Tools">
-                    <MenuItem Header="_Developer">
-                        <MenuItem Header="Add _blank ECU"
+                <MenuItem Header="工具(_T)">
+                    <MenuItem Header="开发者(_D)">
+                        <MenuItem Header="添加空白 ECU(_B)"
                                   Command="{Binding AddBlankEcuCommand}"
                                   ToolTip="Create a fresh ECU with synthetic defaults from EcuIdentitySeeder. This is the same thing the sidebar 'Add ECU' button now does for non-DPS modes; kept here for quick access. Import real identity from a flash readback via the editor's Advanced card ('Load identity from bin...')."/>
                     </MenuItem>
                 </MenuItem>
-                <MenuItem Header="_Log">
+                <MenuItem Header="日志(_L)">
                     <!-- Master gate. When unchecked, the four items below grey
                          out (their IsEnabled is bound to IsFileLoggingEnabled).
                          StaysOpenOnClick=True on every IsCheckable item keeps
                          the menu open so the user can flip several toggles at
                          once without re-opening the menu each time. -->
                     <MenuItem x:Name="LogToFileCheck"
-                              Header="_Log to file"
+                              Header="记录到文件(_L)"
                               IsCheckable="True"
                               StaysOpenOnClick="True"
                               IsChecked="{Binding IsFileLoggingEnabled, Mode=TwoWay}"
                               ToolTip="Stream every bus + diagnostic line to %LOCALAPPDATA%\GmEcuSimulator\logs\bus logs\bus_*.csv on a dedicated background thread. Independent of the 'Log traffic' textbox gate - use when high-volume downloads make the textbox impractical."/>
-                    <MenuItem Header="_Open folder…"
+                    <MenuItem Header="打开文件夹…(_O)"
                               Click="OnOpenLogFolderClicked"
                               ToolTip="Open the log directory in Explorer."/>
                     <Separator/>
-                    <MenuItem Header="Include _J2534 calls"
+                    <MenuItem Header="包含 J2534 调用(_J)"
                               IsCheckable="True"
                               StaysOpenOnClick="True"
                               IsChecked="{Binding LogIncludeJ2534Calls, Mode=TwoWay}"
                               IsEnabled="{Binding IsFileLoggingEnabled}"
                               ToolTip="When on, pipe-level J2534 calls (Open/Connect/StartMsgFilter/etc.) reach the file. The textbox / Download tab mirror is unaffected."/>
-                    <MenuItem Header="Include _bus traffic"
+                    <MenuItem Header="包含总线流量(_B)"
                               IsCheckable="True"
                               StaysOpenOnClick="True"
                               IsChecked="{Binding LogIncludeBusTraffic, Mode=TwoWay}"
                               IsEnabled="{Binding IsFileLoggingEnabled}"
                               ToolTip="When on, every CAN frame (Rx/Tx, including HOST FILTERED) reaches the file. The textbox is unaffected."/>
-                    <MenuItem Header="_Append description tag"
+                    <MenuItem Header="附加描述标签(_A)"
                               IsCheckable="True"
                               StaysOpenOnClick="True"
                               IsChecked="{Binding LogAppendDescriptionTag, Mode=TwoWay}"
                               IsEnabled="{Binding IsFileLoggingEnabled}"
                               ToolTip="Suffix every bus-frame line with a short human-readable tag (e.g. 'SecurityAccess - RequestSeed', 'ISO-TP FF (3110B) - TransferData @ 003FAFE0'). Tag is produced by UdsAnnotator from the raw bytes."/>
-                    <MenuItem Header="_Collapse bulk transfers"
+                    <MenuItem Header="折叠批量传输(_C)"
                               IsCheckable="True"
                               StaysOpenOnClick="True"
                               IsChecked="{Binding LogCollapseBulkTransfers, Mode=TwoWay}"
@@ -322,7 +322,7 @@
                      window launcher; the launcher now lives under the ECU menu
                      ("Open ECU settings"), so View collapsed into a single
                      Theme entry and that's now its own top-level menu. -->
-                <MenuItem Header="_Theme" x:Name="ThemeMenu"
+                <MenuItem Header="主题(_T)" x:Name="ThemeMenu"
                           ToolTip="Switch the colour palette. Drop your own .xaml palette into %APPDATA%\GmEcuSimulator\Palettes\ to see it listed here."/>
                 <!-- About. The version line is stamped at build time from the
                      git tag (see GmEcuSimulator.csproj StampVersionFromGit /
@@ -330,8 +330,8 @@
                      binary was built from. Clicking it opens the full About
                      dialog; the releases item jumps to the GitHub page the
                      version is keyed to. -->
-                <MenuItem Header="_About">
-                    <MenuItem Header="_Protocols…"
+                <MenuItem Header="关于(_A)">
+                    <MenuItem Header="协议…(_P)"
                               Click="OnProtocolsClicked"
                               ToolTip="Show every protocol and service this app supports, and which ones it answers"/>
                     <Separator/>
@@ -339,13 +339,13 @@
                               Click="OnAboutClicked"
                               ToolTip="Show version and project details"/>
                     <Separator/>
-                    <MenuItem Header="View _releases on GitHub…"
+                    <MenuItem Header="在 GitHub 上查看发布…(_V)"
                               Click="OnViewReleasesClicked"
                               ToolTip="Open the GitHub releases page in your browser"/>
                 </MenuItem>
             </Menu>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,12,0">
-                    <TextBlock Text="Mode"
+                    <TextBlock Text="模式"
                                Style="{StaticResource Text.Caption}"
                                Foreground="{DynamicResource Text.SecondaryBrush}"
                                VerticalAlignment="Center"
@@ -376,7 +376,7 @@
                     <TextBlock Text="{Binding PrimeArchiveDisplay}" Style="{StaticResource Text.MonoDim}"
                                VerticalAlignment="Center" Margin="0,0,12,0"
                                ToolTip="Active Prime-From-Archive state. Set via the ECUs pane's Add button in DPS modes."/>
-                    <TextBlock Text="Pipe" Style="{StaticResource Text.Caption}" Margin="0,0,6,0"
+                    <TextBlock Text="管道" Style="{StaticResource Text.Caption}" Margin="0,0,6,0"
                                VerticalAlignment="Center"/>
                     <TextBlock Text="\\.\pipe\GmEcuSim.PassThru" Style="{StaticResource Text.MonoDim}"
                                VerticalAlignment="Center"/>
@@ -477,7 +477,7 @@
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="PIDs"
+                                            <TextBlock Text="PID 列表"
                                                        Style="{StaticResource Text.Subtitle}"
                                                        VerticalAlignment="Center"/>
                                             <TextBlock Grid.Column="1"
@@ -491,7 +491,7 @@
                                                     x:Name="AddTileButton"
                                                     Style="{StaticResource Button.Icon}"
                                                     Click="AddTileButton_Click"
-                                                    ToolTip="Pin a PID to the dashboard">
+                                                    ToolTip="将 PID 固定到仪表板">
                                                 <Path Data="M 8 1 L 8 15 M 1 8 L 15 8"
                                                       Stroke="{DynamicResource Text.PrimaryBrush}"
                                                       StrokeThickness="1.8"
@@ -543,11 +543,11 @@
                                                                       ItemsSource="{Binding Data.PickerModes, Source={StaticResource VmProxy}}"
                                                                       SelectedItem="{Binding Data.PickerSelectedMode, Source={StaticResource VmProxy}}"
                                                                       DisplayMemberPath="Display"
-                                                                      ToolTip="Filter by diagnostic mode"/>
+                                                                      ToolTip="按诊断模式筛选"/>
                                                         </Grid>
                                                         <TextBox Margin="0,0,0,6"
                                                                  Text="{Binding Data.PickerFilterText, Source={StaticResource VmProxy}, UpdateSourceTrigger=PropertyChanged}"
-                                                                 ToolTip="Filter by PID id or name"/>
+                                                                 ToolTip="按 PID ID 或名称筛选"/>
                                                         <ListBox x:Name="PickerList"
                                                                  MaxHeight="240"
                                                                  ItemsSource="{Binding Data.PickerCandidates, Source={StaticResource VmProxy}}"
@@ -556,7 +556,7 @@
                                                         <Button Margin="0,6,0,0"
                                                                 HorizontalAlignment="Right"
                                                                 Style="{StaticResource Button.Primary}"
-                                                                Content="Add"
+                                                                Content="添加"
                                                                 Command="{Binding Data.AddTileCommand, Source={StaticResource VmProxy}}"
                                                                 CommandParameter="{Binding SelectedItem, ElementName=PickerList}"/>
                                                     </StackPanel>
@@ -595,7 +595,7 @@
                                                                 Cursor="SizeAll">
                                                             <Border.ContextMenu>
                                                                 <ContextMenu>
-                                                                    <MenuItem Header="Delete"
+                                                                    <MenuItem Header="删除"
                                                                               Command="{Binding RemoveCommand}"/>
                                                                 </ContextMenu>
                                                             </Border.ContextMenu>
@@ -679,16 +679,16 @@
                     CornerRadius="4">
                 <TabControl x:Name="BusLogTabControl" Margin="0">
                     <!-- Bus log tab -->
-                    <TabItem Header="Bus log">
+                    <TabItem Header="总线日志">
                         <DockPanel LastChildFill="True">
                             <Border DockPanel.Dock="Top" Style="{StaticResource Toolbar}">
                                 <StackPanel Orientation="Horizontal">
                                     <CheckBox x:Name="LogTrafficCheck"
-                                              Content="Log traffic"
+                                              Content="记录流量"
                                               VerticalAlignment="Center"
                                               IsChecked="{Binding IsLoggingEnabled, Mode=TwoWay}"
                                               ToolTip="Master gate for the bus log AND the Download tab's mirror. Off by default - at $AA Fast 25Hz the bus frames alone can flood the textbox quickly."/>
-                                    <Button Content="Clear" Click="OnClearLogClicked"
+                                    <Button Content="清除" Click="OnClearLogClicked"
                                             Margin="16,0,0,0"/>
                                     <Rectangle Width="1" Margin="12,4" Fill="{DynamicResource Border.SubtleBrush}"/>
                                     <!-- File-log status only. The Log-to-file toggle and Open-folder
@@ -702,18 +702,18 @@
                                                ToolTip="File-log status. Toggle 'Log to file' under the Log menu to start/stop the sink."/>
                                     <Rectangle Width="1" Margin="12,4" Fill="{DynamicResource Border.SubtleBrush}"/>
                                     <CheckBox x:Name="MaximizeBusLogCheck"
-                                              Content="Maximize"
+                                              Content="最大化"
                                               VerticalAlignment="Center"
                                               IsChecked="{Binding IsMaximized, Mode=TwoWay}"
                                               ToolTip="Collapse the ECU/PID editor and fill the window with the workspace tabs. Shared with the Download tab's Maximize toggle."/>
                                     <CheckBox x:Name="HideTesterPresentCheck"
-                                              Content="Hide $3E"
+                                              Content="隐藏 $3E"
                                               Margin="12,0,0,0"
                                               VerticalAlignment="Center"
                                               IsChecked="{Binding SuppressTesterPresentInWindow, Mode=TwoWay}"
                                               ToolTip="Hide TesterPresent keepalives ($3E requests and $7E positive responses) from this log window only. The file-log capture is not affected."/>
                                     <CheckBox x:Name="HideBroadcastsCheck"
-                                              Content="Hide broadcasts"
+                                              Content="隐藏广播"
                                               Margin="12,0,0,0"
                                               VerticalAlignment="Center"
                                               IsChecked="{Binding SuppressBroadcastsInWindow, Mode=TwoWay}"
@@ -737,12 +737,12 @@
                                             <Ellipse Width="6" Height="6"
                                                      Fill="{DynamicResource Accent.PrimaryBrush}"
                                                      VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                            <TextBlock Text="CAN frames"
+                                            <TextBlock Text="CAN 帧"
                                                        Style="{StaticResource Text.Caption}"
                                                        Foreground="{DynamicResource Text.PrimaryBrush}"
                                                        FontWeight="SemiBold"
                                                        VerticalAlignment="Center"/>
-                                            <TextBlock Text="Tx / Rx"
+                                            <TextBlock Text="发送 / 接收"
                                                        Style="{StaticResource Text.Caption}"
                                                        Margin="8,0,0,0"
                                                        VerticalAlignment="Center"/>
@@ -781,12 +781,12 @@
                                             <Ellipse Width="6" Height="6"
                                                      Fill="{DynamicResource Status.SuccessBrush}"
                                                      VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                            <TextBlock Text="J2534 calls"
+                                            <TextBlock Text="J2534 调用"
                                                        Style="{StaticResource Text.Caption}"
                                                        Foreground="{DynamicResource Text.PrimaryBrush}"
                                                        FontWeight="SemiBold"
                                                        VerticalAlignment="Center"/>
-                                            <TextBlock Text="control plane"
+                                            <TextBlock Text="控制平面"
                                                        Style="{StaticResource Text.Caption}"
                                                        Margin="8,0,0,0"
                                                        VerticalAlignment="Center"/>
@@ -803,7 +803,7 @@
 <!-- (Download tab removed) -->
 
                     <!-- Bin Replay tab - ECU Simulator mode only -->
-                    <TabItem Header="Bin Replay"
+                    <TabItem Header="Bin 回放"
                              Visibility="{Binding ShowsBinReplayTab, Converter={StaticResource BoolToVis}}">
                         <views:BinReplayView DataContext="{Binding BinReplay}"/>
                     </TabItem>
@@ -811,7 +811,7 @@
                     <!-- (Security tab removed - reset moved to ECU > Reset state) -->
 
                     <!-- Glitch settings tab - ECU Simulator mode only -->
-                    <TabItem Header="Glitch settings"
+                    <TabItem Header="故障注入设置"
                              Visibility="{Binding ShowsGlitchTab, Converter={StaticResource BoolToVis}}">
                         <DockPanel DataContext="{Binding SelectedEcu}" LastChildFill="True">
                             <Border DockPanel.Dock="Top" Style="{StaticResource Toolbar}">
@@ -825,10 +825,10 @@
                                                FontWeight="SemiBold"
                                                VerticalAlignment="Center"/>
                                     <Rectangle Width="1" Margin="16,3" Fill="{DynamicResource Border.SubtleBrush}"/>
-                                    <CheckBox Content="Enable glitch injection"
+                                    <CheckBox Content="启用故障注入"
                                               IsChecked="{Binding Glitch.Enabled}"
                                               VerticalAlignment="Center"/>
-                                    <TextBlock Text="prep - not yet wired into bus logic"
+                                    <TextBlock Text="准备中 - 尚未接入总线逻辑"
                                                Style="{StaticResource Text.Hint}"
                                                Margin="14,0,0,0"
                                                VerticalAlignment="Center"/>
@@ -847,14 +847,14 @@
                                           CanUserDeleteRows="False"
                                           BorderThickness="0,0,1,0">
                                     <DataGrid.Columns>
-                                        <DataGridTextColumn Header="Service"
+                                        <DataGridTextColumn Header="服务"
                                                             Binding="{Binding ServiceLabel}"
                                                             IsReadOnly="True" Width="*"/>
-                                        <DataGridTextColumn Header="Probability %"
+                                        <DataGridTextColumn Header="概率 %"
                                                             Binding="{Binding ProbabilityPercent, UpdateSourceTrigger=LostFocus}"
                                                             EditingElementStyle="{StaticResource MaterialDesignDataGridTextColumnPopupEditingStyle}"
                                                             Width="120"/>
-                                        <DataGridTemplateColumn Header="Action" Width="180">
+                                        <DataGridTemplateColumn Header="动作" Width="180">
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate>
                                                     <ComboBox Style="{StaticResource ComboBox.Cell}"
@@ -868,11 +868,11 @@
 
                                 <Border Grid.Column="1" Padding="14,12">
                                     <DockPanel>
-                                        <TextBlock DockPanel.Dock="Top" Text="NRC pool"
+                                        <TextBlock DockPanel.Dock="Top" Text="NRC 池"
                                                    Style="{StaticResource Text.Subtitle}"
                                                    Margin="0,0,0,4"/>
                                         <TextBlock DockPanel.Dock="Top"
-                                                   Text="When EmitNrc fires, an NRC is randomly chosen from the ticked entries."
+                                                   Text="当触发 EmitNrc 时，从勾选的条目中随机选择一个 NRC。"
                                                    Style="{StaticResource Text.Hint}"
                                                    TextWrapping="Wrap"
                                                    Margin="0,0,0,10"/>
@@ -895,16 +895,16 @@
                          Service36Handler anchors on the first $36 address so
                          real-DPS absolute-address sessions work without any
                          toggle. -->
-                    <TabItem Header="Captures"
+                    <TabItem Header="捕获文件"
                              Visibility="{Binding ShowsCaptureTab, Converter={StaticResource BoolToVis}}">
                         <DockPanel DataContext="{Binding Capture}" LastChildFill="True">
                             <Border DockPanel.Dock="Top" Style="{StaticResource Toolbar}">
                                 <StackPanel Orientation="Horizontal">
-                                    <Button Content="Open folder"
+                                    <Button Content="打开文件夹"
                                             Command="{Binding OpenFolderCommand}"
                                             Style="{StaticResource Button.Ghost}"
                                             Margin="0,0,8,0"/>
-                                    <Button Content="Refresh"
+                                    <Button Content="刷新"
                                             Command="{Binding RefreshCommand}"
                                             Style="{StaticResource Button.Ghost}"/>
                                 </StackPanel>
@@ -918,17 +918,17 @@
 
                                 <Border Grid.Row="0" Padding="18,12,18,6">
                                     <StackPanel>
-                                        <TextBlock Text="CAPTURE DIRECTORY"
+                                        <TextBlock Text="捕获目录"
                                                    Style="{StaticResource Text.SectionHeader}"
                                                    Margin="0,0,0,4"/>
                                         <TextBlock Text="{Binding CaptureDirectory}"
                                                    Style="{StaticResource Text.MonoDim}"
                                                    TextWrapping="NoWrap"
                                                    Margin="0,0,0,12"/>
-                                        <TextBlock Text="CAPTURED FILES"
+                                        <TextBlock Text="已捕获文件"
                                                    Style="{StaticResource Text.SectionHeader}"
                                                    Margin="0,0,0,4"/>
-                                        <TextBlock Text="Each row is one programming session (a $34/$36 sequence ending in $20 ReturnToNormalMode or a P3C timeout). Filename embeds ECU name, UTC timestamp, base $36 address, and byte count."
+                                        <TextBlock Text="每一行代表一个编程会话（$34/$36 序列，以 $20 返回正常模式或 P3C 超时结束）。文件名包含 ECU 名称、UTC 时间戳、$36 基地址和字节数。"
                                                    Style="{StaticResource Text.Hint}"
                                                    TextWrapping="Wrap"
                                                    Margin="0,0,0,6"/>
@@ -943,9 +943,9 @@
                                           IsReadOnly="True"
                                           Margin="14,0,14,12">
                                     <DataGrid.Columns>
-                                        <DataGridTextColumn Header="File"     Binding="{Binding FileName}" Width="*"/>
-                                        <DataGridTextColumn Header="Size"     Binding="{Binding SizeText}" Width="100"/>
-                                        <DataGridTextColumn Header="Modified" Binding="{Binding Modified, StringFormat=g}" Width="180"/>
+                                        <DataGridTextColumn Header="文件"     Binding="{Binding FileName}" Width="*"/>
+                                        <DataGridTextColumn Header="大小"     Binding="{Binding SizeText}" Width="100"/>
+                                        <DataGridTextColumn Header="修改时间" Binding="{Binding Modified, StringFormat=g}" Width="180"/>
                                     </DataGrid.Columns>
                                 </DataGrid>
                             </Grid>

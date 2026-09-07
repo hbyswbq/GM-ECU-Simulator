@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
-        Title="Registered J2534 Devices"
+        Title="已注册的 J2534 设备"
         Height="600" Width="900"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
@@ -17,7 +17,7 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <TextBlock x:Name="ChromeTitle"
-                       Text="Registered J2534 Devices"
+                       Text="已注册的 J2534 设备"
                        Style="{StaticResource Text.Body}"
                        FontWeight="SemiBold"
                        VerticalAlignment="Center"
@@ -26,7 +26,7 @@
                     Style="{StaticResource Button.ChromeClose}"
                     Width="46" Height="32"
                     Click="OnCloseClicked"
-                    ToolTip="Close">
+                    ToolTip="关闭">
                 <Path Data="{StaticResource Icon.Close}"
                       Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
                       StrokeThickness="1.2"
@@ -41,7 +41,7 @@
                 BorderThickness="0,1,0,0"
                 Padding="14,10">
             <Button HorizontalAlignment="Right"
-                    Content="Close"
+                    Content="关闭"
                     IsCancel="True" IsDefault="True"
                     Click="OnCloseClicked"
                     MinWidth="90"/>
@@ -51,10 +51,10 @@
         <Border DockPanel.Dock="Top" Padding="14,12,14,10">
             <StackPanel>
                 <TextBlock x:Name="SubtitleBlock"
-                           Text="J2534 device registry"
+                           Text="J2534 设备注册表"
                            Style="{StaticResource Text.Subtitle}"/>
                 <TextBlock x:Name="DescriptionBlock"
-                           Text="Output of ShimInstaller\List.ps1 - every J2534 PassThru device registered on this machine, both bitnesses. Read-only diagnostic."
+                           Text="ShimInstaller\List.ps1 的输出 - 本机注册的每个 J2534 PassThru 设备，包括两种位数。只读诊断。"
                            Style="{StaticResource Text.Caption}"
                            TextWrapping="Wrap"
                            Margin="0,4,0,0"/>

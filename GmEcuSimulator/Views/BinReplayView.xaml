@@ -23,16 +23,16 @@
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <Button Grid.Column="0" Content="Load…"
+                    <Button Grid.Column="0" Content="加载…"
                             Style="{StaticResource Button.Primary}"
                             Command="{Binding LoadFileCommand}"
                             Margin="0,0,8,0"
-                            ToolTip="Open a .bin produced by the sibling GM DataLogger. Channel headers carry Name, Unit, Address, NodeType, Size, DataType, Scalar, Offset."/>
-                    <Button Grid.Column="1" Content="Load synthetic demo"
+                            ToolTip="打开由配套 GM DataLogger 生成的 .bin 文件。通道头包含名称、单位、地址、节点类型、大小、数据类型、标量、偏移量。"/>
+                    <Button Grid.Column="1" Content="加载合成演示"
                             Command="{Binding LoadDemoCommand}"
                             Margin="0,0,8,0"
-                            ToolTip="Loads a deterministic 4-channel in-memory bin (RPM/TPS/Coolant/TransTemp). For wiring up the start/stop hooks before the real bin loader lands."/>
-                    <Button Grid.Column="2" Content="Unload"
+                            ToolTip="加载确定性的 4 通道内存 bin（RPM/TPS/冷却液/变速箱温度）。用于在真实 bin 加载器完成前连接启动/停止钩子。"/>
+                    <Button Grid.Column="2" Content="卸载"
                             Command="{Binding UnloadCommand}"/>
 
                     <Border Grid.Column="4"
@@ -69,7 +69,7 @@
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="File"
+                    <TextBlock Grid.Column="0" Text="文件"
                                Style="{StaticResource Text.Caption}"
                                VerticalAlignment="Center"
                                Margin="0,0,8,0"/>
@@ -89,19 +89,19 @@
 
                 <!-- Row 3: loop mode + autoload -->
                 <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                    <TextBlock Text="Loop mode"
+                    <TextBlock Text="循环模式"
                                Style="{StaticResource Text.Caption}"
                                VerticalAlignment="Center"
                                Margin="0,0,8,0"/>
                     <ComboBox ItemsSource="{Binding Source={StaticResource LoopModes}}"
                               SelectedItem="{Binding LoopMode}"
                               MinWidth="140"
-                              ToolTip="HoldLast freezes at the last sample. Loop wraps to the start. Stop transitions to Stopped at end-of-bin."/>
+                              ToolTip="HoldLast 在最后一个样本处冻结。Loop 循环到开头。Stop 在 bin 结束时转换为已停止。"/>
                     <Rectangle Width="1" Margin="16,4" Fill="{DynamicResource Border.SubtleBrush}"/>
-                    <CheckBox Content="Auto-load on app start"
+                    <CheckBox Content="应用启动时自动加载"
                               IsChecked="{Binding AutoLoadOnStart}"
                               VerticalAlignment="Center"
-                              ToolTip="Persists the loaded bin path in ecu_config.json and re-loads on next launch."/>
+                              ToolTip="将加载的 bin 路径保存在 ecu_config.json 中，并在下次启动时重新加载。"/>
                 </StackPanel>
             </StackPanel>
         </Border>
@@ -114,11 +114,11 @@
                   BorderThickness="0">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="ECU"     Binding="{Binding EcuLabel}"   Width="220"/>
-                <DataGridTextColumn Header="Address" Binding="{Binding AddressHex}" Width="90"/>
-                <DataGridTextColumn Header="Name"    Binding="{Binding Name}"       Width="*" MinWidth="160"/>
-                <DataGridTextColumn Header="Unit"    Binding="{Binding Unit}"       Width="70"/>
-                <DataGridTextColumn Header="Size"    Binding="{Binding SizeBytes}"  Width="60"/>
-                <DataGridTextColumn Header="Live"    Binding="{Binding LiveValue}"  Width="120"/>
+                <DataGridTextColumn Header="地址" Binding="{Binding AddressHex}" Width="90"/>
+                <DataGridTextColumn Header="名称"    Binding="{Binding Name}"       Width="*" MinWidth="160"/>
+                <DataGridTextColumn Header="单位"    Binding="{Binding Unit}"       Width="70"/>
+                <DataGridTextColumn Header="大小"    Binding="{Binding SizeBytes}"  Width="60"/>
+                <DataGridTextColumn Header="实时值"    Binding="{Binding LiveValue}"  Width="120"/>
             </DataGrid.Columns>
         </DataGrid>
     </DockPanel>

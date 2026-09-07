@@ -18,17 +18,17 @@
 
         <!-- Action buttons row -->
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
-            <Button Content="Load from bin..."
+            <Button Content="从 bin 加载..."
                     MinWidth="170"
                     Padding="10,6"
                     Margin="0,0,8,0"
                     Command="{Binding LoadFromBinCommand}"
                     ToolTip="Walk a donor / sibling ECU bin and fill non-bytecode rows with the walker's authentic byte sequences."/>
-            <Button Content="Auto-populate empty rows"
+            <Button Content="自动填充空行"
                     MinWidth="200"
                     Padding="10,6"
                     Command="{Binding AutoPopulateCommand}"
-                    ToolTip="Fill every Empty row with a sensible default (right length, plausible shape for known DIDs)."/>
+                    ToolTip="用合理的默认值填充每个空行（正确长度，已知 DID 的合理形状）。"/>
         </StackPanel>
 
         <Border DockPanel.Dock="Top" Margin="0,0,0,8"
@@ -81,17 +81,17 @@
                 </Style>
             </DataGrid.RowStyle>
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Step"   Binding="{Binding Step}"           IsReadOnly="True" Width="60"/>
-                <DataGridTextColumn Header="Read"   Binding="{Binding DidOrPidDisplay}" IsReadOnly="True" Width="120">
+                <DataGridTextColumn Header="步骤"   Binding="{Binding Step}"           IsReadOnly="True" Width="60"/>
+                <DataGridTextColumn Header="读取"   Binding="{Binding DidOrPidDisplay}" IsReadOnly="True" Width="120">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="FontFamily" Value="Consolas"/>
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
-                <DataGridTextColumn Header="Source" Binding="{Binding SourceDisplay}"  IsReadOnly="True" Width="100"/>
-                <DataGridTextColumn Header="Length" Binding="{Binding Length}"         IsReadOnly="True" Width="70"/>
-                <DataGridTextColumn Header="Value (hex, editable)"
+                <DataGridTextColumn Header="来源" Binding="{Binding SourceDisplay}"  IsReadOnly="True" Width="100"/>
+                <DataGridTextColumn Header="长度" Binding="{Binding Length}"         IsReadOnly="True" Width="70"/>
+                <DataGridTextColumn Header="值（十六进制，可编辑）"
                                     Binding="{Binding ValueHex, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                                     Width="*">
                     <DataGridTextColumn.ElementStyle>

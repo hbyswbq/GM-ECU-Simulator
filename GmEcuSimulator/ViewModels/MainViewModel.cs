@@ -337,24 +337,24 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
             {
                 ThemedMessageBox.Show(
                     owner,
-                    "Change mode",
-                    $"Switching from {fromLabel} to {toLabel} will clear " +
-                    "the current ECU set.\n\nSave the current configuration first?",
+                    "切换模式",
+                    $"从 {fromLabel} 切换到 {toLabel} 将清除" +
+                    "当前 ECU 集。\n\n是否先保存当前配置？",
                     MessageBoxImage.Question,
                     new ThemedDialogButton(
-                        "Cancel",
+                        "取消",
                         isCancel: true),
                     new ThemedDialogButton(
-                        "Discard",
+                        "放弃",
                         onClick: () => proceed = true),
                     new ThemedDialogButton(
-                        "Save As...",
+                        "另存为...",
                         onClick: () =>
                         {
                             var settings = AppSettings.Load();
                             var dlg = new SaveFileDialog
                             {
-                                Filter = "Mode config (*.mode.json)|*.mode.json|JSON (*.json)|*.json|All files|*.*",
+                                Filter = "模式配置 (*.mode.json)|*.mode.json|JSON (*.json)|*.json|所有文件|*.*",
                                 DefaultExt = ".mode.json",
                                 FileName = oldMode.ConfigFileName(),
                                 InitialDirectory = AppSettings.ResolveInitialDir(settings.LastConfigDir),
@@ -366,10 +366,10 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
                                 proceed = true;
                                 PersistLastConfigDir(settings, dlg.FileName);
                             }
-                            catch (Exception ex) { Error("Save failed", ex); }
+                            catch (Exception ex) { Error("保存失败", ex); }
                         }),
                     new ThemedDialogButton(
-                        "Save & Switch",
+                        "保存并切换",
                         onClick: () =>
                         {
                             try
@@ -377,7 +377,7 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
                                 ConfigStore.Save(SnapshotForSave(), ConfigStore.PathForMode(oldMode));
                                 proceed = true;
                             }
-                            catch (Exception ex) { Error("Save failed", ex); }
+                            catch (Exception ex) { Error("保存失败", ex); }
                         },
                         isDefault: true,
                         primary: true));
@@ -386,15 +386,15 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
             {
                 ThemedMessageBox.Show(
                     owner,
-                    "Change mode",
-                    $"Switching from {fromLabel} will clear the current ECU. " +
-                    $"{oldMode.DisplayName()} state is not persisted - continue?",
+                    "切换模式",
+                    $"从 {fromLabel} 切换将清除当前 ECU。" +
+                    $"{oldMode.DisplayName()} 状态不会保存 - 是否继续？",
                     MessageBoxImage.Warning,
                     new ThemedDialogButton(
-                        "Cancel",
+                        "取消",
                         isCancel: true),
                     new ThemedDialogButton(
-                        "Continue",
+                        "继续",
                         onClick: () => proceed = true,
                         isDefault: true,
                         primary: true));
@@ -983,7 +983,7 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
         set { SetField(ref currentFilePath, value); OnPropertyChanged(nameof(WindowTitle)); }
     }
 
-    public string WindowTitle => "GM ECU Simulator";
+    public string WindowTitle => "GM ECU 模拟器";
 
     public string StatusText
     {
@@ -1303,12 +1303,12 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
         bool proceed = false;
         ThemedMessageBox.Show(
             Application.Current?.MainWindow,
-            "Remove ECU",
-            $"Remove ECU \"{name}\" from the bus? This discards its PIDs, " +
-            "waveforms, and any unsaved inspector edits.",
+            "移除 ECU",
+            $"从总线移除 ECU \"{name}\"？这将丢弃其 PID、" +
+            "波形以及任何未保存的编辑器更改。",
             MessageBoxImage.Warning,
-            new ThemedDialogButton("Cancel", isCancel: true),
-            new ThemedDialogButton("Remove",
+            new ThemedDialogButton("取消", isCancel: true),
+            new ThemedDialogButton("移除",
                 onClick: () => proceed = true,
                 isDefault: true));
 
@@ -1765,7 +1765,7 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
     // async void is only acceptable on event/command handlers - this is one.
     private async void RegisterJ2534()
     {
-        StatusText = "Awaiting UAC approval...";
+        StatusText = "等待 UAC 授权...";
         var (ok, canceled, output, logPath) = await RunPwshAsync(ScriptPath("Register.ps1"));
         if (ok)
         {
@@ -1773,13 +1773,13 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
             // HKLM can actually connect. Start is idempotent.
             try { pipeServer.Start(); }
             catch (Exception ex) { bus.LogSim?.Invoke($"Pipe server Start after Register failed: {ex.Message}"); }
-            StatusText = "Registered. Restart your J2534 host to pick up the new device.";
+            StatusText = "已注册。请重启 J2534 主机以识别新设备。";
         }
         else if (canceled)
-            StatusText = "Registration cancelled (UAC declined).";
+            StatusText = "注册已取消（UAC 被拒绝）。";
         else
         {
-            StatusText = $"Registration failed - log at {logPath}";
+            StatusText = $"注册失败 - 日志位于 {logPath}";
             ShowScriptFailureDialog("J2534 Registration failed", "Register.ps1", logPath, output);
         }
         RefreshConnectionStatus();
@@ -1787,7 +1787,7 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
 
     private async void UnregisterJ2534()
     {
-        StatusText = "Awaiting UAC approval...";
+        StatusText = "等待 UAC 授权...";
         var (ok, canceled, output, logPath) = await RunPwshAsync(ScriptPath("Unregister.ps1"));
         if (ok)
         {
@@ -1798,13 +1798,13 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
             // registry write claimed we were gone.
             try { await pipeServer.StopAsync(); }
             catch (Exception ex) { bus.LogSim?.Invoke($"Pipe server Stop after Unregister failed: {ex.Message}"); }
-            StatusText = "Unregistered.";
+            StatusText = "已取消注册。";
         }
         else if (canceled)
-            StatusText = "Unregister cancelled (UAC declined).";
+            StatusText = "取消注册已取消（UAC 被拒绝）。";
         else
         {
-            StatusText = $"Unregister failed - log at {logPath}";
+            StatusText = $"取消注册失败 - 日志位于 {logPath}";
             ShowScriptFailureDialog("J2534 Unregister failed", "Unregister.ps1", logPath, output);
         }
         RefreshConnectionStatus();
@@ -1830,7 +1830,7 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
 
     private async void ShowRegisteredDevices()
     {
-        StatusText = "Reading registry…";
+        StatusText = "正在读取注册表…";
         var output = await CapturePwshAsync(ScriptPath("List.ps1"));
         StatusText = "Ready";
         var win = new GmEcuSimulator.Views.RegisteredDevicesWindow(output)
@@ -1985,7 +1985,7 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
                 catch (Exception ex)
                 {
                     Application.Current?.Dispatcher.Invoke(() =>
-                        MessageBox.Show(ex.Message, "PowerShell launch failed", MessageBoxButton.OK, MessageBoxImage.Error));
+                        MessageBox.Show(ex.Message, "PowerShell 启动失败", MessageBoxButton.OK, MessageBoxImage.Error));
                     return (false, false, ex.ToString(), logPath);
                 }
             }).ConfigureAwait(true);

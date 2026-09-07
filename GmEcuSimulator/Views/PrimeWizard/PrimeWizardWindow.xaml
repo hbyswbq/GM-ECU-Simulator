@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:GmEcuSimulator.ViewModels.PrimeWizard"
         xmlns:pages="clr-namespace:GmEcuSimulator.Views.PrimeWizard"
-        Title="DPS Prime Wizard"
+        Title="DPS 加载向导"
         Height="700" Width="1000"
         WindowStartupLocation="CenterScreen"
         ShowInTaskbar="False"
@@ -30,7 +30,7 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <TextBlock Text="DPS Prime Wizard"
+            <TextBlock Text="DPS 加载向导"
                        Style="{StaticResource Text.Body}"
                        FontWeight="SemiBold"
                        VerticalAlignment="Center"
@@ -39,7 +39,7 @@
                     Style="{StaticResource Button.ChromeClose}"
                     Width="46" Height="32"
                     Click="OnCloseClicked"
-                    ToolTip="Close">
+                    ToolTip="关闭">
                 <Path Data="{StaticResource Icon.Close}"
                       Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
                       StrokeThickness="1.2"
@@ -72,7 +72,7 @@
                         MinWidth="100" Margin="0,0,8,0"
                         Command="{Binding BackCommand}"/>
 
-                <Button Grid.Column="2" Content="Cancel"
+                <Button Grid.Column="2" Content="取消"
                         MinWidth="100" Margin="0,0,8,0"
                         IsCancel="True"
                         Command="{Binding CancelCommand}"/>
@@ -83,7 +83,7 @@
                         IsDefault="True"
                         Command="{Binding NextCommand}"/>
 
-                <Button Grid.Column="4" Content="Apply Prime"
+                <Button Grid.Column="4" Content="应用加载"
                         MinWidth="120"
                         Visibility="{Binding IsApplyVisible, Converter={StaticResource BoolToVis}}"
                         IsDefault="True"

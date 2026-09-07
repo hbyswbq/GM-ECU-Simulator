@@ -140,14 +140,14 @@ public sealed class WaveformViewModel : NotifyPropertyChangedBase
             var summary = result.SkippedHeader
                 ? $"Loaded {result.Samples.Count} rows (header row skipped)."
                 : $"Loaded {result.Samples.Count} rows.";
-            MessageBox.Show(summary, "CSV waveform",
+            MessageBox.Show(summary, "CSV 波形",
                 MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
             MessageBox.Show(
-                $"The selected file is not a compatible waveform CSV:\n\n{ex.Message}",
-                "CSV waveform",
+                $"所选文件不是兼容的波形 CSV：\n\n{ex.Message}",
+                "CSV 波形",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }

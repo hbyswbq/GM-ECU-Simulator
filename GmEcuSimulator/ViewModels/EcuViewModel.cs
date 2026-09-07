@@ -448,13 +448,13 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
         // explicit), No = merge (keeps user-edited / auto-populated values),
         // Cancel = bail.
         var modeChoice = MessageBox.Show(
-            "Replace all existing $1A DIDs on this ECU with what the bin contains?\n\n" +
-            "[Yes] Replace all - clear every DID on this ECU first, then write only " +
-            "what the bin surfaces. DIDs the bin can't extract end up unconfigured.\n\n" +
-            "[No] Add only if blank - keep existing DIDs; only fill ones currently empty. " +
-            "User edits and prior auto-populate values are preserved.\n\n" +
-            "[Cancel] Don't load.",
-            "Load Info From Bin",
+            "是否用 bin 中的内容替换此 ECU 上所有现有的 $1A DID？\n\n" +
+            "[是] 全部替换 - 先清除此 ECU 上的每个 DID，然后只写入" +
+            "bin 中提取的内容。bin 无法提取的 DID 将最终未配置。\n\n" +
+            "[否] 仅空白时添加 - 保留现有 DID；只填充当前为空的。" +
+            "用户编辑和先前自动填充的值将保留。\n\n" +
+            "[取消] 不加载。",
+            "从 Bin 加载信息",
             MessageBoxButton.YesNoCancel,
             MessageBoxImage.Question);
 
@@ -470,7 +470,7 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Could not read file:\n{ex.Message}", "Load Info From Bin",
+            MessageBox.Show($"无法读取文件：\n{ex.Message}", "从 Bin 加载信息",
                 MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
@@ -484,10 +484,10 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
         if (result == null)
         {
             MessageBox.Show(
-                "Could not identify this file as a GM ECU flash image. No service " +
-                "dispatcher was located - file may be truncated, encrypted, or a " +
-                "different ECU family than T43/E38/E67.",
-                "Load Info From Bin", MessageBoxButton.OK, MessageBoxImage.Warning);
+                "无法将此文件识别为 GM ECU 闪存映像。未找到服务" +
+                "调度器 - 文件可能被截断、加密，或属于" +
+                "与 T43/E38/E67 不同的 ECU 系列。",
+                "从 Bin 加载信息", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -554,7 +554,7 @@ public sealed class EcuViewModel : NotifyPropertyChangedBase
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Could not read file:\n{ex.Message}", "Load Info From Bin",
+            MessageBox.Show($"无法读取文件：\n{ex.Message}", "从 Bin 加载信息",
                 MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }

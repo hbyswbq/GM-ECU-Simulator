@@ -9,7 +9,7 @@
     </UserControl.Resources>
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Orientation="Vertical" Margin="0,12">
-            <TextBlock Text="Review what will be applied. Click Apply Prime to register the ECU, or Back to make changes."
+            <TextBlock Text="查看将应用的内容。点击应用加载以注册 ECU，或返回进行更改。"
                        Style="{StaticResource Caption14}"
                        TextWrapping="Wrap"
                        Margin="0,0,0,12"/>
@@ -31,13 +31,13 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Archive:" Style="{StaticResource Caption14}"/>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="存档：" Style="{StaticResource Caption14}"/>
                     <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ArchiveLine}" FontFamily="Consolas" TextWrapping="Wrap"/>
 
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Loaded bin (if any):" Style="{StaticResource Caption14}" Margin="0,6,0,0"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="已加载 bin（如有）：" Style="{StaticResource Caption14}" Margin="0,6,0,0"/>
                     <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding LoadedBinLine}" FontFamily="Consolas" Margin="0,6,0,0" TextWrapping="Wrap"/>
 
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Security module:" Style="{StaticResource Caption14}" Margin="0,6,0,0" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="安全模块：" Style="{StaticResource Caption14}" Margin="0,6,0,0" VerticalAlignment="Center"/>
                     <ComboBox Grid.Row="2" Grid.Column="1"
                               ItemsSource="{Binding AvailableSecurityModules}"
                               SelectedItem="{Binding SelectedSecurityModule, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -47,7 +47,7 @@
                               MinWidth="260"/>
 
                     <TextBlock Grid.Row="3" Grid.Column="0"
-                               Text="Fixed seed (10 hex):"
+                               Text="固定种子（10 位十六进制）："
                                Style="{StaticResource Caption14}"
                                Margin="0,6,0,0"
                                VerticalAlignment="Center"
@@ -59,8 +59,8 @@
                         <TextBox Text="{Binding FixedSeedHex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  FontFamily="Consolas"
                                  MinWidth="180"
-                                 ToolTip="10 hex characters (5 bytes), e.g. 438930D306. Leave blank for a random seed each session."/>
-                        <TextBlock Text="leave blank → random per session"
+                                 ToolTip="10 个十六进制字符（5 字节），例如 438930D306。留空则每次会话随机种子。"/>
+                        <TextBlock Text="留空 → 每次会话随机"
                                    Style="{StaticResource Caption14}"
                                    VerticalAlignment="Center"
                                    Margin="10,0,0,0"/>
@@ -68,7 +68,7 @@
                 </Grid>
             </Border>
 
-            <TextBlock Text="Phase 3 reads" Style="{StaticResource Text.Subtitle}" Margin="0,16,0,6"/>
+            <TextBlock Text="阶段 3 读取" Style="{StaticResource Text.Subtitle}" Margin="0,16,0,6"/>
 
             <Border Padding="14"
                     CornerRadius="4"
@@ -89,26 +89,26 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Total reads:" Style="{StaticResource Caption14}"/>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="总读取数：" Style="{StaticResource Caption14}"/>
                     <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding TotalRows}"/>
 
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="From $53 bytecode literal:" Style="{StaticResource Caption14}" Margin="0,4,0,0"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="来自 $53 字节码字面量：" Style="{StaticResource Caption14}" Margin="0,4,0,0"/>
                     <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding BytecodeRows}" Margin="0,4,0,0"/>
 
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="From bin walker:" Style="{StaticResource Caption14}" Margin="0,4,0,0"/>
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="来自 bin 遍历器：" Style="{StaticResource Caption14}" Margin="0,4,0,0"/>
                     <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding BinRows}" Margin="0,4,0,0"/>
 
-                    <TextBlock Grid.Row="3" Grid.Column="0" Text="From auto-populate default:" Style="{StaticResource Caption14}" Margin="0,4,0,0"/>
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="来自自动填充默认值：" Style="{StaticResource Caption14}" Margin="0,4,0,0"/>
                     <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding DefaultRows}" Margin="0,4,0,0"/>
 
-                    <TextBlock Grid.Row="4" Grid.Column="0" Text="From user override:" Style="{StaticResource Caption14}" Margin="0,4,0,0"/>
+                    <TextBlock Grid.Row="4" Grid.Column="0" Text="来自用户覆盖：" Style="{StaticResource Caption14}" Margin="0,4,0,0"/>
                     <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding UserRows}" Margin="0,4,0,0"/>
 
-                    <TextBlock Grid.Row="5" Grid.Column="0" Text="Empty (zero bytes):" Style="{StaticResource Caption14}" Margin="0,4,0,0"/>
+                    <TextBlock Grid.Row="5" Grid.Column="0" Text="空（零字节）：" Style="{StaticResource Caption14}" Margin="0,4,0,0"/>
                     <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal" Margin="0,4,0,0">
                         <TextBlock Text="{Binding EmptyRows}"/>
                         <TextBlock Margin="10,0,0,0" Foreground="Red" FontWeight="Bold"
-                                   Text="(includes COMPARE_DATA reads - will fail Phase 3!)"
+                                   Text="（包括 COMPARE_DATA 读取 - 将失败阶段 3！）"
                                    Visibility="{Binding HasEmptyCompared, Converter={StaticResource BoolToVis}}"/>
                     </StackPanel>
                 </Grid>

@@ -148,10 +148,10 @@ public sealed class PrimeWizardViewModel : NotifyPropertyChangedBase
 
         if (emptyCompared > 0)
         {
-            var msg = $"{emptyCompared} Phase 3 read(s) with COMPARE_DATA assertions still have no value. " +
-                      $"DPS will likely abort the session at the first compare mismatch.\n\n" +
-                      $"Commit anyway?";
-            var r = MessageBox.Show(msg, "Phase 3 will likely fail",
+            var msg = $"{emptyCompared} 个带有 COMPARE_DATA 断言的阶段 3 读取仍没有值。" +
+                      $"DPS 可能会在第一次比较不匹配时中止会话。\n\n" +
+                      $"是否仍要提交？";
+            var r = MessageBox.Show(msg, "阶段 3 可能会失败",
                 MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if (r != MessageBoxResult.Yes) return;
         }

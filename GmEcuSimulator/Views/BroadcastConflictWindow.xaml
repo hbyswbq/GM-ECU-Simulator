@@ -1,7 +1,7 @@
 <Window x:Class="GmEcuSimulator.Views.BroadcastConflictWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Resolve CAN ID conflicts"
+        Title="解决 CAN ID 冲突"
         Height="480" Width="600"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
@@ -16,7 +16,7 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <TextBlock Text="Resolve CAN ID conflicts"
+            <TextBlock Text="解决 CAN ID 冲突"
                        Style="{StaticResource Text.Body}"
                        FontWeight="SemiBold"
                        VerticalAlignment="Center"
@@ -25,7 +25,7 @@
                     Style="{StaticResource Button.ChromeClose}"
                     Width="46" Height="32"
                     Click="OnCancelClicked"
-                    ToolTip="Cancel">
+                    ToolTip="取消">
                 <Path Data="{StaticResource Icon.Close}"
                       Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
                       StrokeThickness="1.2"
@@ -40,8 +40,8 @@
                 BorderThickness="0,1,0,0"
                 Padding="14,10">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="Cancel" IsCancel="True" MinWidth="90" Click="OnCancelClicked"/>
-                <Button Content="OK"
+                <Button Content="取消" IsCancel="True" MinWidth="90" Click="OnCancelClicked"/>
+                <Button Content="确定"
                         IsDefault="True" MinWidth="110" Margin="10,0,0,0"
                         Click="OnOkClicked"/>
             </StackPanel>
@@ -50,7 +50,7 @@
         <!-- Explanation -->
         <Border DockPanel.Dock="Top" Padding="14,12,14,8">
             <StackPanel>
-                <TextBlock Text="These CAN IDs already exist in the broadcast table, but this DBC defines them with a different shape."
+                <TextBlock Text="这些 CAN ID 已存在于广播表中，但此 DBC 以不同的格式定义它们。"
                            Style="{StaticResource Text.Subtitle}" TextWrapping="Wrap"/>
                 <TextBlock Text="An arbitration ID can only carry one frame. Tick Replace to take the imported definition (your existing row and its source mappings are discarded); untick to keep your existing row and ignore this DBC's version."
                            Style="{StaticResource Text.Caption}" TextWrapping="Wrap" Margin="0,4,0,0"/>
@@ -79,16 +79,16 @@
                                                Margin="0,0,12,0"/>
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                         <TextBlock>
-                                            <Run Text="Existing: " Foreground="{DynamicResource Text.SecondaryBrush}"/>
+                                            <Run Text="现有：" Foreground="{DynamicResource Text.SecondaryBrush}"/>
                                             <Run Text="{Binding ExistingLabel, Mode=OneWay}"/>
                                         </TextBlock>
                                         <TextBlock Margin="0,2,0,0">
-                                            <Run Text="Imported: " Foreground="{DynamicResource Text.SecondaryBrush}"/>
+                                            <Run Text="导入：" Foreground="{DynamicResource Text.SecondaryBrush}"/>
                                             <Run Text="{Binding IncomingLabel, Mode=OneWay}" Foreground="{DynamicResource Accent.PrimaryBrush}"/>
                                         </TextBlock>
                                     </StackPanel>
                                     <CheckBox Grid.Column="2"
-                                              Content="Replace"
+                                              Content="替换"
                                               IsChecked="{Binding Replace}"
                                               VerticalAlignment="Center"
                                               Margin="12,0,4,0"/>

@@ -607,18 +607,18 @@ public partial class MainWindow : Window
     {
         Views.ThemedMessageBox.Show(
             this,
-            $"About {AppInfo.ProductName}",
+            $"关于 {AppInfo.ProductName}",
             $"{AppInfo.ProductName}\n" +
-            $"Version {AppInfo.Version}\n\n" +
-            "GM (GMLAN / GMW3110-2010) ECU emulator that registers itself as a " +
-            "J2534 PassThru device (v04.04).\n\n" +
+            $"版本 {AppInfo.Version}\n\n" +
+            "GM (GMLAN / GMW3110-2010) ECU 模拟器，将自身注册为" +
+            "J2534 PassThru 设备 (v04.04)。\n\n" +
             AppInfo.RepositoryUrl,
             MessageBoxImage.Information,
             new Views.ThemedDialogButton(
-                "View releases",
+                "查看发布",
                 onClick: OpenReleasesPage),
             new Views.ThemedDialogButton(
-                "Close",
+                "关闭",
                 isDefault: true,
                 isCancel: true,
                 primary: true));

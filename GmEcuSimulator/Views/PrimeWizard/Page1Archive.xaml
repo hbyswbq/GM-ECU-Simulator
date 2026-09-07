@@ -8,12 +8,12 @@
         </Style>
     </UserControl.Resources>
     <StackPanel Orientation="Vertical" Margin="0,12">
-        <TextBlock Text="Pick the DPS programming archive (.zip) you want the simulator to honour."
+        <TextBlock Text="选择您希望模拟器遵循的 DPS 编程存档 (.zip)。"
                    Style="{StaticResource Caption14}"
                    TextWrapping="Wrap"
                    Margin="0,0,0,12"/>
 
-        <Button Content="Browse for archive..."
+        <Button Content="浏览存档..."
                 HorizontalAlignment="Left"
                 MinWidth="200"
                 Padding="14,8"
@@ -38,16 +38,16 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="Archive:" Style="{StaticResource Caption14}"/>
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="存档：" Style="{StaticResource Caption14}"/>
                 <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ArchiveBaseName}" FontFamily="Consolas"/>
 
-                <TextBlock Grid.Row="1" Grid.Column="0" Text="Utility file:" Style="{StaticResource Caption14}" Margin="0,6,0,0"/>
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="实用文件：" Style="{StaticResource Caption14}" Margin="0,6,0,0"/>
                 <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding UtilityFileName}" Margin="0,6,0,0" FontFamily="Consolas"/>
 
-                <TextBlock Grid.Row="2" Grid.Column="0" Text="Calibration files:" Style="{StaticResource Caption14}" Margin="0,6,0,0"/>
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="校准文件：" Style="{StaticResource Caption14}" Margin="0,6,0,0"/>
                 <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding CalCount}" Margin="0,6,0,0"/>
 
-                <TextBlock Grid.Row="3" Grid.Column="0" Text="OS Part Number:" Style="{StaticResource Caption14}" Margin="0,6,0,0"/>
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="OS 部件号：" Style="{StaticResource Caption14}" Margin="0,6,0,0"/>
                 <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding OsPartNumber, FallbackValue=(none)}" Margin="0,6,0,0" FontFamily="Consolas"/>
             </Grid>
         </Border>
