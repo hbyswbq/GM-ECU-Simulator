@@ -93,25 +93,26 @@ public sealed class GlitchConfig
     /// <summary>Friendly name for a known GMW3110 service SID. Used by the editor UI.</summary>
     public static string ServiceName(byte sid) => sid switch
     {
-        0x22 => "ReadDataByPid",
-        0x2C => "DynamicallyDefineMessage",
-        0x2D => "DefinePidByAddress",
-        0xAA => "ReadDataByPacketIdentifier",
-        0x3E => "TesterPresent",
-        0x20 => "ReturnToNormalMode",
-        0x10 => "InitiateDiagnosticOperation",
-        _    => "Unknown",
+        0x22 => "按PID读取数据",
+        0x2C => "动态定义消息",
+        0x2D => "按地址定义PID",
+        0xAA => "按数据包标识符读取数据",
+        0x3E => "测试仪在线",
+        0x20 => "返回正常模式",
+        0x10 => "启动诊断操作",
+        _    => "未知",
     };
 
     /// <summary>Friendly name for a known GMW3110 NRC byte. Used by the editor UI.</summary>
     public static string NrcName(byte nrc) => nrc switch
     {
-        0x10 => "generalReject",
-        0x11 => "serviceNotSupported",
-        0x12 => "subFunctionNotSupported",
-        0x22 => "conditionsNotCorrect",
-        0x31 => "requestOutOfRange",
-        0x78 => "busyResponsePending",
-        _    => "Unknown",
+        0x10 => "通用拒绝",
+        0x11 => "服务不支持",
+        0x12 => "子功能不支持",
+        0x22 => "条件不正确",
+        0x31 => "请求超出范围",
+        0x33 => "安全访问被拒绝",
+        0x78 => "忙，响应待定",
+        _    => "未知",
     };
 }

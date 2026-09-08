@@ -63,11 +63,6 @@
             </Style.Triggers>
         </Style>
 
-        <ObjectDataProvider x:Key="GlitchActions" MethodName="GetValues" ObjectType="{x:Type sys:Enum}">
-            <ObjectDataProvider.MethodParameters>
-                <x:Type TypeName="glitch:GlitchAction"/>
-            </ObjectDataProvider.MethodParameters>
-        </ObjectDataProvider>
     </Window.Resources>
 
     <Window.Style>
@@ -820,7 +815,7 @@
                                                Style="{StaticResource Text.Caption}"
                                                VerticalAlignment="Center"
                                                Margin="0,0,8,0"/>
-                                    <TextBlock Text="{Binding Name, FallbackValue=(none selected)}"
+                                    <TextBlock Text="{Binding Name, FallbackValue=（未选择）}"
                                                Style="{StaticResource Text.Body}"
                                                FontWeight="SemiBold"
                                                VerticalAlignment="Center"/>
@@ -858,8 +853,10 @@
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate>
                                                     <ComboBox Style="{StaticResource ComboBox.Cell}"
-                                                              ItemsSource="{Binding Source={StaticResource GlitchActions}}"
-                                                              SelectedItem="{Binding Action, UpdateSourceTrigger=PropertyChanged}"/>
+                                                              ItemsSource="{x:Static glitch:GlitchActionDisplay.All}"
+                                                              DisplayMemberPath="Value"
+                                                              SelectedValuePath="Key"
+                                                              SelectedValue="{Binding Action, UpdateSourceTrigger=PropertyChanged}"/>
                                                 </DataTemplate>
                                             </DataGridTemplateColumn.CellTemplate>
                                         </DataGridTemplateColumn>
@@ -872,17 +869,17 @@
                                                    Style="{StaticResource Text.Subtitle}"
                                                    Margin="0,0,0,4"/>
                                         <TextBlock DockPanel.Dock="Top"
-                                                   Text="当触发 EmitNrc 时，从勾选的条目中随机选择一个 NRC。"
+                                                   Text="当触发“发送NRC”时，从勾选的条目中随机选择一个 NRC。"
                                                    Style="{StaticResource Text.Hint}"
                                                    TextWrapping="Wrap"
                                                    Margin="0,0,0,10"/>
                                         <StackPanel>
-                                            <CheckBox Content="$11 serviceNotSupported"     IsChecked="{Binding Glitch.IncludeNrc11}" Margin="0,4"/>
-                                            <CheckBox Content="$12 subFunctionNotSupported" IsChecked="{Binding Glitch.IncludeNrc12}" Margin="0,4"/>
-                                            <CheckBox Content="$22 conditionsNotCorrect"    IsChecked="{Binding Glitch.IncludeNrc22}" Margin="0,4"/>
-                                            <CheckBox Content="$31 requestOutOfRange"       IsChecked="{Binding Glitch.IncludeNrc31}" Margin="0,4"/>
-                                            <CheckBox Content="$33 securityAccessDenied"    IsChecked="{Binding Glitch.IncludeNrc33}" Margin="0,4"/>
-                                            <CheckBox Content="$78 busyResponsePending"     IsChecked="{Binding Glitch.IncludeNrc78}" Margin="0,4"/>
+                                            <CheckBox Content="$11 服务不支持"     IsChecked="{Binding Glitch.IncludeNrc11}" Margin="0,4"/>
+                                            <CheckBox Content="$12 子功能不支持" IsChecked="{Binding Glitch.IncludeNrc12}" Margin="0,4"/>
+                                            <CheckBox Content="$22 条件不正确"    IsChecked="{Binding Glitch.IncludeNrc22}" Margin="0,4"/>
+                                            <CheckBox Content="$31 请求超出范围"   IsChecked="{Binding Glitch.IncludeNrc31}" Margin="0,4"/>
+                                            <CheckBox Content="$33 安全访问被拒绝" IsChecked="{Binding Glitch.IncludeNrc33}" Margin="0,4"/>
+                                            <CheckBox Content="$78 忙，响应待定"   IsChecked="{Binding Glitch.IncludeNrc78}" Margin="0,4"/>
                                         </StackPanel>
                                     </DockPanel>
                                 </Border>
