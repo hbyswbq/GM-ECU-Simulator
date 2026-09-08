@@ -12,11 +12,12 @@ namespace Shim.Ipc;
 // owns the actual stream and serialization.
 public sealed class RequestDispatcher
 {
-    // GM GMW3110 is KWP2000-derived (ISO 14230) but runs over CAN using ISO 15765-2
-    // (ISO-TP) transport. PATAC / GM DPS tools connect with ProtocolID=4 (ISO14230)
-    // to indicate they want KWP2000 messaging with the shim handling ISO-TP. Treat
-    // ISO14230 as an alias for ISO15765 everywhere the ISO-TP channel is used.
-    private static bool UsesIsoTp(ProtocolID p) => p == ProtocolID.ISO15765 || p == ProtocolID.ISO14230;
+    // GM GMW3110 is KWP2000-derived (ISO 14230, PID=4) but PATAC tools may also
+    // use ISO9141 (PID=3). Both run over CAN using ISO 15765-2 (ISO-TP) transport.
+    // Treat ISO9141, ISO14230, and ISO15765 as ISO-TP protocols everywhere the
+    // ISO-TP channel is used.
+    private static bool UsesIsoTp(ProtocolID p) =>
+        p == ProtocolID.ISO15765 || p == ProtocolID.ISO14230 || p == ProtocolID.ISO9141;
 
     // Upper bound on host-controlled message-count fields (ReadMsgs / WriteMsgs).
     // A real J2534 host never asks for more than a handful at a time; clamping
