@@ -59,6 +59,14 @@ public sealed class Iso15765Channel
     public IsoTpTimingParameters Timing { get; }
 
     /// <summary>
+    /// ProtocolID stamped on reassembled messages returned to the host via
+    /// PassThruReadMsgs. Defaults to ISO15765; set to ISO14230 when the host
+    /// connected with GM KWP2000-over-CAN so responses carry the same protocol
+    /// tag the host used for the connection.
+    /// </summary>
+    public ProtocolID ResponseProtocolId { get; set; } = ProtocolID.ISO15765;
+
+    /// <summary>
     /// Reassembled inbound payloads as they become available. Each entry's
     /// <see cref="PassThruMsg.Data"/> is [4-byte CAN_ID][user payload] - the
     /// J2534 wire shape PassThruReadMsgs returns to the host on an ISO15765
@@ -222,7 +230,7 @@ public sealed class Iso15765Channel
         data[2] = (byte)((canId >> 8) & 0xFF);
         data[3] = (byte)(canId & 0xFF);
         userPayload.CopyTo(data.AsSpan(4));
-        var msg = new PassThruMsg { ProtocolID = ProtocolID.ISO15765, Data = data };
+        var msg = new PassThruMsg { ProtocolID = ResponseProtocolId, Data = data };
         ReassembledPayloadQueue.Enqueue(msg);
         ReassembledAvailable.Release();
     }

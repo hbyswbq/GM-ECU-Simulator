@@ -12,6 +12,12 @@ namespace Shim.Ipc;
 // owns the actual stream and serialization.
 public sealed class RequestDispatcher
 {
+    // GM GMW3110 is KWP2000-derived (ISO 14230) but runs over CAN using ISO 15765-2
+    // (ISO-TP) transport. PATAC / GM DPS tools connect with ProtocolID=4 (ISO14230)
+    // to indicate they want KWP2000 messaging with the shim handling ISO-TP. Treat
+    // ISO14230 as an alias for ISO15765 everywhere the ISO-TP channel is used.
+    private static bool UsesIsoTp(ProtocolID p) => p == ProtocolID.ISO15765 || p == ProtocolID.ISO14230;
+
     // Upper bound on host-controlled message-count fields (ReadMsgs / WriteMsgs).
     // A real J2534 host never asks for more than a handful at a time; clamping
     // here prevents a u32 cast-to-int negative from allocating a multi-GB List.
@@ -302,13 +308,13 @@ public sealed class RequestDispatcher
         var flags = r.ReadU32();                          // CAN_29BIT_ID etc - see ChannelSession.ConnectFlags
         var baud = r.ReadU32();
 
-        // Accept CAN (raw frame forwarding) and ISO15765 (we run the ISO 15765-2
-        // transport layer in this shim - segmentation, FC handshake, reassembly).
-        // Other protocols (J1850, ISO9141, KWP2000) are not implemented.
-        if (proto != ProtocolID.CAN && proto != ProtocolID.ISO15765)
+        // Accept CAN (raw frame forwarding), ISO15765, and ISO14230 (GM GMW3110 /
+        // KWP2000 over CAN - treated as ISO-TP transport). Other protocols (J1850,
+        // ISO9141) are not implemented.
+        if (proto != ProtocolID.CAN && !UsesIsoTp(proto))
         {
             state.Bus.LogJ2534?.Invoke(
-                $"[connect] rejected: protocol {proto} not supported - this shim handles CAN and ISO15765");
+                $"[connect] rejected: protocol {proto} not supported - this shim handles CAN, ISO15765 and ISO14230 (GM KWP2000 over CAN)");
             state.Bus.OnStatusMessage?.Invoke(
                 $"Rejected J2534 connect: {proto} not supported");
             return ProtocolFail(IpcMessageTypes.ConnectResponse, ResultCode.ERR_INVALID_PROTOCOL_ID);
@@ -316,13 +322,14 @@ public sealed class RequestDispatcher
 
         var ch = state.AllocateChannel(proto, baud, flags);
 
-        // For ISO15765 channels, attach a per-channel TP context that drives
-        // segmentation/reassembly. The BusEgress lambda dispatches outbound
-        // CAN frames produced mid-cascade (FCs from our RX side, CFs from our
-        // TX side) back through the bus.
-        if (proto == ProtocolID.ISO15765)
+        // For ISO15765 / ISO14230 (GM KWP2000 over CAN) channels, attach a per-channel
+        // TP context that drives segmentation/reassembly.
+        if (UsesIsoTp(proto))
         {
-            var iso = new Iso15765Channel(new IsoTpTimingParameters());
+            var iso = new Iso15765Channel(new IsoTpTimingParameters())
+            {
+                ResponseProtocolId = proto,
+            };
             iso.BusEgress = frame => state.Bus.DispatchHostTx(frame, ch);
             ch.IsoChannel = iso;
             ch.IsoChannelInbound = (canId, frame) => iso.OnInboundCanFrame(canId, frame.AsSpan(4));
@@ -372,7 +379,7 @@ public sealed class RequestDispatcher
         var msgs = new List<PassThruMsg>(requested);
         var queue = ch.RxQueue;
         var available = ch.RxAvailable;
-        if (ch.Protocol == ProtocolID.ISO15765 && ch.IsoChannel is Iso15765Channel iso)
+        if (UsesIsoTp(ch.Protocol) && ch.IsoChannel is Iso15765Channel iso)
         {
             queue = iso.ReassembledPayloadQueue;
             available = iso.ReassembledAvailable;
@@ -484,7 +491,7 @@ public sealed class RequestDispatcher
         for (int i = 0; i < numMsgs; i++)
         {
             var m = r.ReadPassThruMsg();
-            if (ch.Protocol == ProtocolID.ISO15765 && ch.IsoChannel is Iso15765Channel iso)
+            if (UsesIsoTp(ch.Protocol) && ch.IsoChannel is Iso15765Channel iso)
             {
                 var rc = WriteMsgIso15765(iso, ch, m.Data);
                 if (rc != ResultCode.STATUS_NOERROR) { rcOverride = rc; break; }
@@ -530,7 +537,7 @@ public sealed class RequestDispatcher
             Timestamp  = src.Timestamp,
             Data       = (byte[])src.Data.Clone(),
         };
-        if (ch.Protocol == ProtocolID.ISO15765 && ch.IsoChannel is Iso15765Channel iso)
+        if (UsesIsoTp(ch.Protocol) && ch.IsoChannel is Iso15765Channel iso)
         {
             iso.ReassembledPayloadQueue.Enqueue(echo);
             iso.ReassembledAvailable.Release();
@@ -639,7 +646,7 @@ public sealed class RequestDispatcher
         // FLOW_CONTROL_FILTER on an ISO15765 channel registers an N_AI route in
         // the per-channel TP context. The first 4 bytes of mask/pattern/flowctl
         // Data are the BE CAN ID; for mixed addressing a 5th byte carries N_AE.
-        if (ch.Protocol == ProtocolID.ISO15765 &&
+        if (UsesIsoTp(ch.Protocol) &&
             ch.IsoChannel is Iso15765Channel iso &&
             filterType == FilterType.FLOW_CONTROL_FILTER &&
             maskMsg.Data.Length >= 4 && patternMsg.Data.Length >= 4 && flowCtlMsg.Data.Length >= 4)
