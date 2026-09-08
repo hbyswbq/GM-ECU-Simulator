@@ -56,7 +56,7 @@ public static class EcuNodeFactory
             DiagnosticAddress: diag);
     }
 
-    private static byte CanonicalDiagAddressFor(ushort requestId) => requestId switch
+    public static byte CanonicalDiagAddressFor(ushort requestId) => requestId switch
     {
         0x7E0 => 0x11,   // ECM
         0x7E2 => 0x18,   // TCM

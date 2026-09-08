@@ -1265,6 +1265,7 @@ public sealed class MainViewModel : NotifyPropertyChangedBase
             PhysicalRequestCanId = req,
             UsdtResponseCanId = (ushort)(req + 0x008),
             UudtResponseCanId = (ushort)(req - 0x1F8),       // 0x7E0 -> 0x5E8
+            DiagnosticAddress = EcuNodeFactory.CanonicalDiagAddressFor(req),
             SecurityModule = SecurityModuleRegistry.Create("gm-e38-2byte"),
         };
         // A new ECU starts with no $1A/$22 rows. Seeding the baseline identity + curated live $22 set is an explicit

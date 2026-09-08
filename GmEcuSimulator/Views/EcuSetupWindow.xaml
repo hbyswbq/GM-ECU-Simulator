@@ -498,8 +498,7 @@
                                                  ToolTip="ISO 15765-2 流控块大小 (FC.BS)。当此 ECU 收到首帧时，回复 FC = 30 BS 00。BS 告诉测试仪在等待另一个 FC 之前发送多少个连续帧：0 = 一次性发送所有 CF（最宽松，适用于大多数主机）；1 = 发送1个 CF 然后等待另一个 FC，等等。6Speed.T43 测试仪设置 BS=1 - 它嗅探 FC 尾部的'01'模式来识别 T43 TCM，否则不会开始内核上传。"/>
                                     </Grid>
 
-                                    <Grid Style="{StaticResource FormCell}"
-                                          Visibility="{Binding DataContext.ShowsProgrammingFields, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVis}}">
+                                    <Grid Style="{StaticResource FormCell}">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="96"/>
                                             <ColumnDefinition Width="*"/>
@@ -509,7 +508,7 @@
                                                  Text="{Binding DiagnosticAddressHex, UpdateSourceTrigger=LostFocus}"
                                                  FontFamily="{StaticResource Font.Mono}"
                                                  MaxLength="4"
-                                                 ToolTip="GMW3110 8位诊断地址。对于 SPS C 类型，这是派生 SPS_PrimeReq 和 SPS_PrimeRsp 的字节。"/>
+                                                 ToolTip="GMW3110 8位诊断地址（DID $B0）。所有 ECU 模拟器模式下均可编辑。"/>
                                     </Grid>
 
                                     <Grid Style="{StaticResource FormCell}"
