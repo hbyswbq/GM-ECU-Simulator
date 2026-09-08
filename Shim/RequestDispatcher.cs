@@ -12,12 +12,19 @@ namespace Shim.Ipc;
 // owns the actual stream and serialization.
 public sealed class RequestDispatcher
 {
-    // GM GMW3110 is KWP2000-derived (ISO 14230, PID=4) but PATAC tools may also
-    // use ISO9141 (PID=3). Both run over CAN using ISO 15765-2 (ISO-TP) transport.
-    // Treat ISO9141, ISO14230, and ISO15765 as ISO-TP protocols everywhere the
-    // ISO-TP channel is used.
-    private static bool UsesIsoTp(ProtocolID p) =>
-        p == ProtocolID.ISO15765 || p == ProtocolID.ISO14230 || p == ProtocolID.ISO9141;
+    // GM GMW3110 / GMLAN tools (including PATAC engineering flashing tools) use
+    // vendor-specific J2534 ProtocolID values with the 0x8000 high bit set.
+    // Observed: 0x8005 (32773) from PATAC V0.9.9.6 with flags=0x900 (CAN 29-bit
+    // + ID_BOTH) at 500000 baud. These all run over CAN using ISO 15765-2 (ISO-TP)
+    // transport, so treat them as ISO-TP protocols everywhere the ISO-TP channel is used.
+    // Standard ISO15765 (6) is also included.
+    private const uint GmVendorProtocolBase = 0x8000;
+    private static bool UsesIsoTp(ProtocolID p)
+    {
+        uint raw = (uint)p;
+        return p == ProtocolID.ISO15765 ||
+               (raw & GmVendorProtocolBase) != 0;  // any GM vendor-specific protocol (0x8000+)
+    }
 
     // Upper bound on host-controlled message-count fields (ReadMsgs / WriteMsgs).
     // A real J2534 host never asks for more than a handful at a time; clamping
@@ -309,22 +316,26 @@ public sealed class RequestDispatcher
         var flags = r.ReadU32();                          // CAN_29BIT_ID etc - see ChannelSession.ConnectFlags
         var baud = r.ReadU32();
 
-        // Accept CAN (raw frame forwarding), ISO15765, and ISO14230 (GM GMW3110 /
-        // KWP2000 over CAN - treated as ISO-TP transport). Other protocols (J1850,
-        // ISO9141) are not implemented.
+        // Accept CAN (raw frame forwarding), ISO15765 (standard UDS over CAN), and
+        // GM vendor-specific protocols (0x8000+, e.g. 0x8005=32773 used by PATAC
+        // engineering flashing tools for GMLAN/Clea2.0). All vendor-specific protocols
+        // run over CAN using ISO 15765-2 (ISO-TP) transport. Other protocols (J1850,
+        // ISO9141, ISO14230 K-line) are not implemented.
         if (proto != ProtocolID.CAN && !UsesIsoTp(proto))
         {
             state.Bus.LogJ2534?.Invoke(
-                $"[connect] rejected: protocol {proto} not supported - this shim handles CAN, ISO15765 and ISO14230 (GM KWP2000 over CAN)");
+                $"[connect] rejected: protocol {proto} (0x{(uint)proto:X}) not supported - this shim handles CAN, ISO15765, and GM vendor-specific (0x8000+) over CAN");
             state.Bus.OnStatusMessage?.Invoke(
-                $"Rejected J2534 connect: {proto} not supported");
+                $"Rejected J2534 connect: {proto} (0x{(uint)proto:X}) not supported");
             return ProtocolFail(IpcMessageTypes.ConnectResponse, ResultCode.ERR_INVALID_PROTOCOL_ID);
         }
 
         var ch = state.AllocateChannel(proto, baud, flags);
 
-        // For ISO15765 / ISO14230 (GM KWP2000 over CAN) channels, attach a per-channel
-        // TP context that drives segmentation/reassembly.
+        // For ISO15765 / GM vendor-specific (0x8000+) channels, attach a per-channel
+        // TP context that drives segmentation/reassembly. ResponseProtocolId ensures
+        // RX messages carry the same ProtocolID the host connected with (e.g. 0x8005),
+        // not hardcoded ISO15765.
         if (UsesIsoTp(proto))
         {
             var iso = new Iso15765Channel(new IsoTpTimingParameters())
