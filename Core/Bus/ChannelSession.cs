@@ -111,7 +111,13 @@ public sealed class ChannelSession
         if (msg.Timestamp == 0)
             msg.Timestamp = Bus?.NowMicros ?? 0;
 
-        if (Protocol == ProtocolID.ISO15765 && IsoChannelInbound != null && msg.Data.Length >= 4)
+        // Route through the ISO-TP layer whenever an IsoChannelInbound callback is
+        // attached — this covers standard ISO15765 (6) AND GM vendor-specific
+        // protocols (0x8000+, e.g. 0x8005 used by PATAC engineering flashing tools).
+        // Checking IsoChannelInbound != null is more robust than hardcoding
+        // ProtocolID.ISO15765 because the shim attaches the callback for every
+        // ISO-TP-capable protocol regardless of the numeric ProtocolID value.
+        if (IsoChannelInbound != null && msg.Data.Length >= 4)
         {
             uint canId = ((uint)msg.Data[0] << 24) | ((uint)msg.Data[1] << 16)
                        | ((uint)msg.Data[2] << 8)  | msg.Data[3];
